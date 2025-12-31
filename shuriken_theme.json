@@ -1,0 +1,79 @@
+{
+  "CTk": {
+    "fg_color": ["#121212", "#0D0D0D"]
+  },
+  "CTkToplevel": {
+    "fg_color": ["#121212", "#0D0D0D"]
+  },
+  "CTkFrame": {
+    "corner_radius": 6,
+    "border_width": 0,
+    "fg_color": ["#1E1E1E", "#151515"],
+    "top_fg_color": ["#2B2B2B", "#1F1F1F"],
+    "border_color": ["#333333", "#333333"]
+  },
+  "CTkButton": {
+    "corner_radius": 8,
+    "border_width": 0,
+    "fg_color": ["#C41E3A", "#9F1A30"],
+    "hover_color": ["#FF3333", "#CC2222"],
+    "border_color": ["#FF4444", "#CC3333"],
+    "text_color": ["#FFFFFF", "#DDDDDD"],
+    "text_color_disabled": ["#888888", "#666666"]
+  },
+  "CTkLabel": {
+    "corner_radius": 6,
+    "fg_color": "transparent",
+    "text_color": ["#FFFFFF", "#DDDDDD"]
+  },
+  "CTkEntry": {
+    "corner_radius": 6,
+    "border_width": 2,
+    "fg_color": ["#2D2D2D", "#1E1E1E"],
+    "border_color": ["#555555", "#444444"],
+    "text_color": ["#FFFFFF", "#DDDDDD"],
+    "placeholder_text_color": ["#AAAAAA", "#888888"]
+  },
+  "CTkCheckBox": {
+    "corner_radius": 6,
+    "fg_color": ["#C41E3A", "#9F1A30"],
+    "hover_color": ["#FF3333", "#CC2222"],
+    "checkmark_color": ["#FFFFFF", "#DDDDDD"],
+    "text_color": ["#FFFFFF", "#DDDDDD"]
+  },
+  "CTkSwitch": {
+    "corner_radius": 100,
+    "fg_color": ["#444444", "#333333"],
+    "progress_color": ["#C41E3A", "#9F1A30"],
+    "button_color": ["#FFFFFF", "#DDDDDD"],
+    "button_hover_color": ["#EEEEEE", "#CCCCCC"]
+  },
+  "CTkProgressBar": {
+    "corner_radius": 6,
+    "fg_color": ["#333333", "#222222"],
+    "progress_color": ["#C41E3A", "#9F1A30"],
+    "border_width": 0
+  },
+  "CTkSlider": {
+    "corner_radius": 100,
+    "fg_color": ["#444444", "#333333"],
+    "progress_color": ["#C41E3A", "#9F1A30"],
+    "button_color": ["#FFFFFF", "#DDDDDD"],
+    "button_hover_color": ["#C41E3A", "#9F1A30"]
+  },
+  "CTkScrollbar": {
+    "corner_radius": 6,
+    "border_spacing": 3,
+    "fg_color": "transparent",
+    "button_color": ["#666666", "#555555"],
+    "button_hover_color": ["#888888", "#777777"]
+  },
+  "CTkScrollableFrame": {
+    "label_fg_color": ["#2B2B2B", "#1F1F1F"]
+  },
+  "CTkFont": {
+    "family": "Segoe UI",
+    "size": 13,
+    "weight": "normal"
+  }
+}
