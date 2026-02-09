@@ -6,7 +6,7 @@ Built for users who want strong leak protection, automatic reconnection, and a c
 
 ## Overview
 
-Shuriken is a custom-designed VPN client that uses **official WireGuard** under the hood while adding enterprise-grade protections:
+Shuriken is a custom-designed VPN client that uses **official WireGuard** under the hood while adding military grade protections:
 - Full Kill Switch
 - DNS + DoH/DoT leak blocking
 - Automatic reconnect after sleep, adapter changes, or crashes
