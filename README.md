@@ -1,6 +1,6 @@
 # Shuriken VPN
 
-**Shuriken** is a fast, lightweight, and highly secure **WireGuard-based VPN client** for Windows, focused on maximum privacy and reliability.
+**Shuriken** is a fast, lightweight, and highly secure **WireGuard based VPN client** for Windows, focused on maximum privacy and reliability.
 
 Built for users who want strong leak protection, automatic reconnection, and a clean modern interface without bloat.
 
