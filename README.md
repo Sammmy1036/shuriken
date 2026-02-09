@@ -22,8 +22,6 @@ Shuriken is a custom-designed VPN client that uses **official WireGuard** under 
 - **Tray Icon with Status Overlay** – Green = Protected, Red = Unprotected
 - **Official Tor Browser Integration** (Recommended: Tor over VPN)
 - **Auto Network Repair** – Fixes stuck adapters and DNS cache issues
-- **Clean Dark UI** using CustomTkinter
-- **Portable-ready** (works when packaged with PyInstaller)
 
 ## Requirements
 
