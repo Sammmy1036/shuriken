@@ -1,44 +1,49 @@
-# 🛡️ Shuriken VPN v1.0.0.0  
+# Shuriken VPN
 
-Shuriken VPN is a lightweight Windows VPN management tool designed to provide a secure and automated experience for WireGuard configurations — offering simplified control, automatic IP detection, and DNS leak protection.
+**Shuriken** is a fast, lightweight, and highly secure **WireGuard-based VPN client** for Windows, focused on maximum privacy and reliability.
 
----
+Built for users who want strong leak protection, automatic reconnection, and a clean modern interface without bloat.
 
-## 🚀 Features
-- One-click VPN connection management  
-- Built-in kill-switch and DNS leak protection  
-- Automatic IPv6 leak prevention  
-- Real-time connection status and tray integration  
-- Compatible with any VPN `.conf` files. It is recommended to use free or premium ProtonVPN files or `.conf` files you trust!
+![Shuriken Banner](https://via.placeholder.com/800x200/1a1a1a/00ff9f?text=Shuriken+VPN) <!-- Replace with real screenshot later -->
 
----
+## Overview
 
-## ⚙️ Requirements
-- **Windows 10 / 11 (64-bit)**
-- **Administrator privileges** (Required for firewall and adapter control)
-- **WireGuard** (Automatically installed by Shuriken installer)
+Shuriken is a custom-designed VPN client that uses **official WireGuard** under the hood while adding enterprise-grade protections:
+- Full Kill Switch (no leaks even on disconnect)
+- DNS + DoH/DoT leak blocking
+- Automatic reconnect after sleep, adapter changes, or crashes
+- Smart server selection with fuzzy search
+- Built-in official Tor Browser launcher
 
-## ⚙️ Optional
-- **ProtonVPN** Free or Premium Account (Recommended for trusted `.conf` files!)
+## Features
 
----
+- **Full Kill Switch** – Blocks all internet if VPN drops
+- **DNS Leak Protection** – Blocks port 53, 853 and DoH (443)
+- **Smart Reconnect** – Survives sleep, Wi-Fi changes, network resets
+- **Fuzzy Server Search** – Search by city, country, airport code (e.g. "la", "tokyo", "ams")
+- **Tray Icon with Status Overlay** – Green = Protected, Red = Unprotected
+- **Official Tor Browser Integration** (Recommended: Tor over VPN)
+- **Auto Network Repair** – Fixes stuck adapters and DNS cache issues
+- **Clean Dark UI** using CustomTkinter
+- **Portable-ready** (works when packaged with PyInstaller)
 
-## 🧩 Setup Guide
+## Requirements
 
-### Step 1 — Create a ProtonVPN Account  
-Sign up for a free account here:  
-👉 [https://protonvpn.com/](https://protonvpn.com/)
+- **Windows 10 / 11** (64-bit)
+- **Administrator rights** (required for firewall rules & DNS protection)
+- **WireGuard** installed (MSI will be auto-detected or bundled)
 
-### Step 2 — Log in to Your Proton Account  
-Use your ProtonVPN credentials to access the dashboard.
+## Setup Guide
 
-### Step 3 — Download WireGuard Configurations  
-1. Go to **Menu → Downloads**.  
-2. Scroll down and select **Platform: Windows**.  
-3. Under *Configuration Files*, choose the **NAT-PMP (Port Forwarding)** option.  
-4. For each server region you want, click **Create** → **Download** to save the `.conf` file.
+### Option 1: Run from Source (Recommended for testing)
 
-### Step 4 — Add Config Files to Shuriken  
-Move all downloaded `.conf` files into the Shuriken Config folder
+```bash
+git clone https://github.com/yourusername/shuriken.git
+cd shuriken
 
-Default Path: C:\Program Files\Shuriken\Config
+# Recommended: Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+pip install -r requirements.txt
+python Shuriken.py
