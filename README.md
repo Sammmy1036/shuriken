@@ -46,7 +46,7 @@ We operate a small fleet of public WireGuard servers with a strict operational d
 **No-logs operational policy**
 - No storage of: traffic content, DNS queries, source IPs, connection times, bandwidth per user, or any linking metadata
 - DNS is handled via an internal AdGuard Home instance with query logging **disabled**
-- The only data processed is ephemeral encrypted tunnel traffic — nothing is persisted to disk
+- The only data processed is ephemeral encrypted tunnel traffic and nothing is persisted to disk
 
 **RAM-only / diskless server architecture**
 - Servers boot from read-only images (netboot / squashfs)
@@ -55,14 +55,14 @@ We operate a small fleet of public WireGuard servers with a strict operational d
 - **Power cycle / reboot = everything disappears**
 
 ### Transparency log
-- **2026-02-01** — Routine reboot of all public nodes. Verified tmpfs mounts and no persistent WireGuard-related files post-reboot.
+- **2026-02-01** — Routine reboot of all public nodes. Verified tmpfs mounts and no persistent WireGuard related files post-reboot.
 - **2026-01-15** — Zero data requests / subpoenas received that could be actioned.
 - **2025-12-20** — Enforced tmpfs mounts on logging and config directories in bootstrap image.
 
 We publish any future compelled data requests in this section.
 
 ### Audit invitation
-The client is open source — feel free to audit, build from source, or run your own servers.  
+The client is open source. Feel free to audit, build from source, or run your own servers.  
 Server provisioning code is public so the RAM-disk setup can be independently verified.
 
 Questions → open an issue.
