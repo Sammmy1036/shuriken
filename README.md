@@ -4,8 +4,6 @@
 
 Built for users who want strong leak protection, automatic reconnection, and a clean modern interface without bloat.
 
-![Shuriken Banner](https://via.placeholder.com/800x200/1a1a1a/00ff9f?text=Shuriken+VPN) <!-- Replace with real screenshot later -->
-
 ## Overview
 
 Shuriken is a custom-designed VPN client that uses **official WireGuard** under the hood while adding enterprise-grade protections:
