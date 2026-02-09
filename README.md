@@ -31,7 +31,7 @@ Shuriken is a VPN client that uses **official WireGuard** under the hood while a
 
 ## Privacy & Transparency
 
-Shuriken is an **open-source client** — the code is public and can be audited.  
+Shuriken is an **open-source client**. The code is public and can be audited.  
 It does **not** collect, phone home, or log any user activity on your device.
 
 ### Client-side (your computer)
@@ -41,7 +41,7 @@ It does **not** collect, phone home, or log any user activity on your device.
 - All WireGuard keys & configs stay on your machine (in the `Config/` folder)
 
 ### Server-side (public Shuriken endpoints)
-We operate (or strongly endorse) a small fleet of public WireGuard servers with a strict operational design aimed at minimizing any possibility of user-identifiable logging:
+We operate a small fleet of public WireGuard servers with a strict operational design aimed at minimizing any possibility of user-identifiable logging:
 
 **No-logs operational policy**
 - No storage of: traffic content, DNS queries, source IPs, connection times, bandwidth per user, or any linking metadata
@@ -54,15 +54,12 @@ We operate (or strongly endorse) a small fleet of public WireGuard servers with 
 - /var/log, /var/lib/wireguard, /etc/wireguard → mounted as tmpfs or redirected to /dev/null
 - **Power cycle / reboot = everything disappears**
 
-Server bootstrap & hardening scripts (Ansible / Packer) are public here:  
-→ [github.com/yourusername/shuriken-infra] (create this repo if it doesn't exist yet)
-
-### Transparency log (warrant canary style)
+### Transparency log
 - **2026-02-01** — Routine reboot of all public nodes. Verified tmpfs mounts and no persistent WireGuard-related files post-reboot.
 - **2026-01-15** — Zero data requests / subpoenas received that could be actioned.
 - **2025-12-20** — Enforced tmpfs mounts on logging and config directories in bootstrap image.
 
-We publish any future compelled data requests (that we can legally disclose) in this section.
+We publish any future compelled data requests in this section.
 
 ### Audit invitation
 The client is open source — feel free to audit, build from source, or run your own servers.  
