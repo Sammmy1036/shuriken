@@ -18,7 +18,7 @@ Shuriken is a VPN client that uses **official WireGuard** under the hood while a
 - **Full Kill Switch** – Blocks all internet if VPN drops
 - **DNS Leak Protection** – Blocks port 53, 853 and DoH (443)
 - **Smart Reconnect** – Survives sleep, Wi-Fi changes, network resets
-- **Fuzzy Server Search** – Search by city, country, airport code (e.g. "la", "tokyo", "ams")
+- **Fuzzy Server Search** – Search by city, state, country
 - **Tray Icon with Status Overlay** – Green = Protected, Red = Unprotected
 - **Official Tor Browser Integration** (Recommended: Tor over VPN)
 - **Auto Network Repair** – Fixes stuck adapters and DNS cache issues
