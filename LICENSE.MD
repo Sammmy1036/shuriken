@@ -11,38 +11,39 @@ By downloading, installing, or using the Software, you acknowledge that you have
 
 ## 2. No Affiliation
 
-The Software is not affiliated, associated, authorized, endorsed by, or in any way officially connected with WireGuard®, ProtonVPN, or any subsidiaries or affiliates of these entities.
+The Software is not affiliated, associated, authorized, endorsed by, or in any way officially connected with WireGuard® or any subsidiaries or affiliates of related entities.
 
-WireGuard® is a registered trademark of Jason A. Donenfeld.  
-ProtonVPN is operated by Proton AG.
+WireGuard® is a registered trademark of Jason A. Donenfeld.
 
 All names, trademarks, and brands are the property of their respective owners.
 
-## 3. User Responsibility
+## 3. User Responsibility & Prohibition of Illegal Use
 
 You are solely responsible for all activities performed using the Software.
 
-The creator of this Software accepts no liability for:
+**Illegal activities of any kind are strictly prohibited.** The Software must not be used for any unlawful purpose, including but not limited to hacking, fraud, distribution of illegal content, or any violation of applicable laws.
 
-- Improper use or misuse
+The creator of this Software accepts no liability and bears no responsibility for:
+
+- Any illegal use or misuse
 - Legal, financial, or operational consequences
-- Misconfigurations caused by user-supplied WireGuard configuration files
+- Misconfigurations caused by user-supplied configuration files
 - Loss of connectivity, data, or privacy arising from user choices
 
-You are fully responsible for verifying the trustworthiness and safety of any WireGuard `.conf` files you choose to use.
+You are fully responsible for verifying the trustworthiness and safety of any configuration files you choose to use.
 
 ## 4. Third-Party Requirements
 
-The Software interacts with third-party technologies and services required for operation, including:
+The Software interacts with and/or bundles third-party technologies and services required for operation, including:
 
-- WireGuard protocol (for tunnel creation)
-- Optional ProtonVPN services (for downloading configuration files)
+- WireGuard protocol (bundled — for tunnel creation)
+- Tor Browser (bundled — for optional onion routing / privacy features)
 
-You are responsible for reviewing the corresponding Terms of Service and Privacy Policies for:
+You are responsible for reviewing the corresponding Terms of Service, Licenses, and Privacy Policies for:
 
 - WireGuard
-- ProtonVPN
-- Any VPN server provider used via custom `.conf` files
+- Tor Project / Tor Browser
+- Any other third-party components or services used via custom configurations
 
 No guarantee of compatibility with third-party services is provided.
 
@@ -62,11 +63,9 @@ All operations that involve external communication (such as IP checking) are per
 
 ### 5.1 Server-Side & Infrastructure Privacy (User Responsibility)
 
-ShurikenVPN is a purely **client-side** application and has **no control over**, nor does it interact with, the WireGuard server, DDNS service, or DNS resolver chosen by the user.
+ShurikenVPN is a purely **client-side** application in terms of user tracking and telemetry. Any logging policy (or lack thereof) on the VPN endpoint, DDNS provider, or DNS resolver is determined **solely** by the configuration and infrastructure selected or provided.
 
-- No logging, telemetry, or data collection occurs from within ShurikenVPN to any server (self-hosted or third-party).
-- Any logging policy (or lack thereof) on the WireGuard endpoint, DDNS provider, or DNS server is determined **solely** by the configuration file and infrastructure selected by the user.
-- Users who self-host their WireGuard server, DDNS, and DNS services remain fully responsible for configuring and verifying those components in accordance with their own no-logging requirements.
+Users who self-host components remain fully responsible for configuring and verifying those components in accordance with their own no-logging requirements.
 
 ## 6. Security Overview
 
@@ -91,7 +90,7 @@ ShurikenVPN explicitly does **NOT**:
 - Modify antivirus or third-party firewall rules
 - Override Group Policy settings
 - Interfere with unrelated network interfaces
-- Modify the content of user-supplied WireGuard configuration files
+- Modify the content of user-supplied configuration files (when applicable)
 
 ### 6.3 Leak Protection
 
@@ -106,43 +105,38 @@ ShurikenVPN implements:
 
 To avoid misunderstanding, the Software does not:
 
-- Provide VPN servers, accounts, endpoints, or bandwidth
-- Validate the safety, authenticity, or trustworthiness of WireGuard configs
 - Monitor browsing activity or network traffic
 - Collect user analytics or telemetry
-- Upload or transmit any data to external services
-- Guarantee anonymity beyond what the chosen VPN server provides
+- Upload or transmit any data to external services without user-initiated purpose
 - Override OS-level protections or enterprise networking policies
-
-Users are fully responsible for choosing safe and trusted VPN servers.
 
 ## 8. User Disclaimer & Liability Statement
 
-The Software relies entirely on user-provided WireGuard configuration files, which can alter routing, DNS behavior, and network paths.
+The Software relies on configuration files and infrastructure that can alter routing, DNS behavior, and network paths.
 
-By using ShurikenVPN, you acknowledge:
+By using ShurikenVPN, you acknowledge and accept:
 
 ### 8.1 User Risk Acceptance
 
 You accept all risks associated with:
 
-- Using untrusted or malicious WireGuard servers
-- Incorrect routing rules or AllowedIPs in your config
-- Tunnel behavior defined by your configuration file
-- DNS settings defined in the `.conf` file
-- Any breach, privacy leak, or misconfiguration caused by user-supplied settings
+- Using untrusted or malicious servers
+- Incorrect routing rules or AllowedIPs in your configuration
+- Tunnel behavior defined by your configuration
+- DNS settings defined in your configuration
+- Any breach, privacy leak, or misconfiguration caused by chosen settings
 
 ### 8.2 Developer Liability
 
 The creator of the Software shall not be held liable for:
 
 - Damages, losses, or security incidents
-- Performance issues caused by third-party VPN servers
-- Legal or regulatory consequences arising from usage
-- Network outages caused by user configuration files
-- Misuse of the Software or violations of third-party TOS
+- Performance issues caused by VPN servers or infrastructure
+- Legal or regulatory consequences arising from usage (including any illegal use)
+- Network outages caused by configuration files or servers
+- Misuse of the Software or violations of third-party terms
 
-You assume complete responsibility for ensuring your configurations are safe and appropriate.
+You assume complete responsibility for ensuring your configurations and usage are safe, legal, and appropriate.
 
 ## 9. Warranty Disclaimer
 
@@ -158,12 +152,12 @@ IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DAMAGES, CLAIMS, OR OTHER LIABILI
 
 The creator of ShurikenVPN shall not be held liable for:
 
-- Violations of ProtonVPN, WireGuard, or other service provider Terms
+- Violations of third-party licenses or terms
 - Misuse, illegal use, or prohibited use
 - Security breaches, privacy leaks, or data loss
 - Network downtime or performance issues
 - Actions taken by government or legal authorities
-- Damages caused by third-party VPN servers, files, or services
+- Damages caused by servers, files, or services
 
 ## 11. Governing Law
 

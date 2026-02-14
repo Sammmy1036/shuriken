@@ -1,6 +1,9 @@
 from pathlib import Path
-import subprocess, time, socket, winreg
-from constants import CONFIG_DIR, CONFIG_NAME, SERVICE_NAME, WG_PROGDATA, WG_EXE, WG_CLI, DEBUG_MODE
+import subprocess, time, socket, winreg, ctypes
+from constants import (
+    CONFIG_DIR, CONFIG_NAME, SERVICE_NAME, WG_PROGDATA, WG_EXE, WG_CLI, DEBUG_MODE,
+    STEALTH_PORT_ENABLED, DEFAULT_STEALTH_PORT   # ← ADD THIS LINE
+)
 from network import run, _ps, add_dns_leak_block, remove_dns_leak_block, add_kill_switch, remove_kill_switch, enable_ipv6_on_non_wg_adapters
 from metadata import SERVER_METADATA
 from utils import read_registry, write_registry
@@ -21,9 +24,7 @@ def validate_config_has_dns(conf_path: Path) -> bool:
 def copy_conf_to_progdata(src: Path) -> Path:
     """
     Securely copy a WireGuard config to ProgramData.
-    - Resolves symlinks/hardlinks
-    - Enforces strict containment in CONFIG_DIR
-    - Prevents arbitrary file read
+    Now supports stealth port 443 when enabled.
     """
     try:
         src_resolved = src.resolve(strict=True)
@@ -31,28 +32,52 @@ def copy_conf_to_progdata(src: Path) -> Path:
         raise ValueError(f"Source config does not exist: {src}")
     except Exception as e:
         raise ValueError(f"Cannot resolve source path: {src}") from e
+
     try:
         config_dir_resolved = CONFIG_DIR.resolve(strict=True)
     except Exception as e:
         raise RuntimeError("CONFIG_DIR is not accessible") from e
+
     if config_dir_resolved not in src_resolved.parents:
         raise ValueError(
             f"Config file must be inside CONFIG_DIR.\n"
             f"CONFIG_DIR: {config_dir_resolved}\n"
-            f"Rejected:   {src_resolved}\n"
-            f"Parent:     {src_resolved.parent}"
+            f"Rejected:   {src_resolved}"
         )
+
     WG_PROGDATA.mkdir(parents=True, exist_ok=True)
     dst = WG_PROGDATA / CONFIG_NAME
+
     text = src_resolved.read_text(encoding="utf-8", errors="ignore")
     lines = [ln.rstrip("\n") for ln in text.splitlines()]
+
+    stealth_enabled = False
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Shuriken", 0, winreg.KEY_READ)
+        value, _ = winreg.QueryValueEx(key, "StealthPort")
+        stealth_enabled = bool(value)
+        winreg.CloseKey(key)
+        print(f"[DEBUG] Stealth mode from registry = {stealth_enabled}")
+    except Exception:
+        pass
+
     new_lines = []
     for ln in lines:
-        s = ln.strip()
-        if s.lower().startswith("endpoint"):
-            new_lines.append(ln)
+        s = ln.strip().lower()
+        if s.startswith("endpoint"):
+            if stealth_enabled:
+                print("Applying stealth port 443")
+                if ":" in ln:
+                    host = ln.rsplit(":", 1)[0].strip()
+                    new_lines.append(f"{host}:{DEFAULT_STEALTH_PORT}")
+                else:
+                    new_lines.append(ln)
+            else:
+                new_lines.append(ln)
             continue
         new_lines.append(ln)
+
     new_text = "\n".join(new_lines)
     if not new_text.endswith("\n"):
         new_text += "\n"
@@ -249,26 +274,88 @@ def service_registry_exists(name: str) -> bool:
         pass
     return False
 
-def uninstall_and_wait(name: str, timeout_s: float = 15.0) -> bool:
-    for attempt in range(3):
+def uninstall_and_wait(name: str, timeout_s: float = 25.0) -> bool:
+    """
+    Aggressive WireGuard tunnel cleanup.
+    Returns True if tunnel appears fully gone (interface + registry).
+    """
+    name_lower = name.lower()
+    print(f"[UNINSTALL] Starting aggressive cleanup for '{name}'")
+
+    # Phase 1: Repeated uninstall attempts
+    for attempt in range(5):  # more attempts
         code, out, err = service_uninstall(name)
-        if code == 0:
-            print(f"[UNINSTALL] Attempt {attempt+1} succeeded (exit 0)")
-        t0 = time.time()
-        while time.time() - t0 < timeout_s:
-            if (name.lower() not in wg_active_interfaces() and
-                not service_registry_exists(name)):
-                return True
-            time.sleep(0.3)
-        if attempt == 2:
+        msg = out or err or ""
+        print(f"[UNINSTALL] Attempt {attempt+1}: exit={code}, msg={msg.strip()}")
+        if code == 0 or "not installed" in msg.lower() or "does not exist" in msg.lower():
+            print("[UNINSTALL] Uninstall reported success or already gone")
+            break
+        time.sleep(0.8)
+
+    # Phase 2: Force-kill anything WireGuard-related
+    for proc in ["wireguard.exe", "wireguard.exe"]:
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", proc],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=6,
+                capture_output=True
+            )
+            print(f"[UNINSTALL] Killed {proc}")
+        except:
+            pass
+
+    try:
+        subprocess.run(
+            ["sc", "stop", name],
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            timeout=8,
+            capture_output=True
+        )
+        print("[UNINSTALL] sc stop attempted")
+    except:
+        pass
+
+    time.sleep(1.0)
+
+    # Phase 3: Wait and poll multiple signals
+    t_start = time.time()
+    while time.time() - t_start < timeout_s:
+        active = name_lower in wg_active_interfaces()
+        reg_exists = service_registry_exists(name)
+
+        if not active and not reg_exists:
+            print("[UNINSTALL] Clean: no active interface + no registry entry")
+            time.sleep(0.6)  # small grace
+            return True
+
+        print(f"[UNINSTALL] Still present → active={active}, reg={reg_exists}")
+        time.sleep(0.5)
+
+    # Phase 4: Nuclear — direct registry deletion (requires admin!)
+    try:
+        base_key = r"SOFTWARE\WireGuard\Tunnels"
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, base_key, 0, winreg.KEY_ALL_ACCESS
+        ) as key:
             try:
-                subprocess.run(["taskkill", "/F", "/IM", "wireguard.exe"], 
-                               creationflags=CREATE_NO_WINDOW, timeout=5)
-                subprocess.run(["sc", "stop", name], creationflags=CREATE_NO_WINDOW, timeout=5)
-                time.sleep(1)
-            except:
-                pass
-    return name.lower() not in wg_active_interfaces() and not service_registry_exists(name)
+                winreg.DeleteKey(key, name)
+                print(f"[UNINSTALL] Deleted registry key: {base_key}\\{name}")
+            except FileNotFoundError:
+                pass  # already gone
+            except OSError as e:
+                print(f"[UNINSTALL] Registry delete failed: {e}")
+    except Exception as e:
+        print(f"[UNINSTALL] Could not open registry for deletion: {e}")
+
+    # Final check
+    time.sleep(1.2)
+    final_active = name_lower in wg_active_interfaces()
+    final_reg = service_registry_exists(name)
+    success = not final_active and not final_reg
+
+    print(f"[UNINSTALL] Final result: success={success} (active={final_active}, reg={final_reg})")
+    return success
 
 def install_with_retry(cfg: Path, retries: int = 10, base_delay: float = 0.5) -> tuple[bool, str]:
     delay = base_delay
@@ -325,7 +412,6 @@ def vpn_up_nogui() -> tuple[bool, str | None, Path | None]:
         CONFIG_DIR.resolve(strict=True)
     except Exception:
         return False, "CONFIG_DIR is missing. Please reinstall application.", None
-
     if CONFIG_DIR not in saved.parents:
         return False, f"Selected config is outside allowed folder: {saved}. Please reinstall application.", None
     try:
@@ -336,6 +422,7 @@ def vpn_up_nogui() -> tuple[bool, str | None, Path | None]:
     # --- Apply DNS leak block + full kill switch before tunnel install ---
     add_dns_leak_block()
     add_kill_switch()
+
     ok, msg = install_with_retry(cfg)
     if not ok:
         remove_dns_leak_block()
@@ -347,27 +434,122 @@ def vpn_up_nogui() -> tuple[bool, str | None, Path | None]:
 
     t0 = time.time()
     timeout = 40.0
+    tunnel_detected_time = None
+
     while time.time() - t0 < timeout:
         if is_vpn_up():
+            if tunnel_detected_time is None:
+                tunnel_detected_time = time.time()
+                if DEBUG_MODE:
+                    print(f"[DEBUG] Tunnel detected at {tunnel_detected_time:.1f}s — giving Windows 2s to settle before rename")
+
+            # Give Windows ~2 seconds after first detection to fully create/register the adapter
+            if time.time() - tunnel_detected_time < 2.0:
+                time.sleep(0.3)
+                continue
+
             # Tunnel is up: remove only DNS block ---
             remove_dns_leak_block()
             # Kill switch stays active to protect if the tunnel drops later
+
+            # ── Improved rename: retry multiple times with better targeting ──
+            renamed = False
+            for rename_attempt in range(1, 6):
+                if DEBUG_MODE:
+                    print(f"[DEBUG] Rename attempt {rename_attempt}/5...")
+
+                # Prefer exact name match first, fallback to any WireGuard adapter
+                ps_command = (
+                    r"Get-NetAdapter | Where-Object { "
+                    r"    ($_.Name -eq '" + SERVICE_NAME + r"') -or "
+                    r"    ($_.InterfaceDescription -like '*WireGuard*') "
+                    r"} | Select-Object -First 1 -ExpandProperty Name"
+                )
+                code, out, err = _ps(ps_command)
+                current_name = out.strip() if code == 0 and out.strip() else ""
+
+                if not current_name:
+                    if DEBUG_MODE:
+                        print("[DEBUG] No matching adapter found for rename")
+                    break
+
+                if current_name == SERVICE_NAME:
+                    if DEBUG_MODE:
+                        print(f"[DEBUG] Adapter already correctly named '{SERVICE_NAME}'")
+                    renamed = True
+                    break
+
+                # Build rename command
+                safe_current = current_name.replace("'", "''").replace('"', '""')
+                rename_ps = (
+                    f"Rename-NetAdapter -Name '{safe_current}' "
+                    f"-NewName '{SERVICE_NAME}' -Confirm:$false -ErrorAction SilentlyContinue"
+                )
+
+                try:
+                    ctypes.windll.shell32.ShellExecuteW(
+                        None, "runas",
+                        "powershell.exe",
+                        f'-NoProfile -Command "{rename_ps}"',
+                        None,
+                        0  # SW_HIDE
+                    )
+                    if DEBUG_MODE:
+                        print(f"[DEBUG] Rename requested for '{current_name}' → '{SERVICE_NAME}' (attempt {rename_attempt})")
+                except Exception as e:
+                    if DEBUG_MODE:
+                        print(f"[DEBUG] ShellExecuteW failed on attempt {rename_attempt}: {e}")
+
+                time.sleep(1.2)  # give time for rename to apply
+
+                # Quick re-check
+                code, out, _ = _ps(f"Get-NetAdapter -Name '{SERVICE_NAME}' -ErrorAction SilentlyContinue | Select -Expand Name")
+                if code == 0 and out.strip() == SERVICE_NAME:
+                    if DEBUG_MODE:
+                        print(f"[DEBUG] Rename successful after attempt {rename_attempt}")
+                    renamed = True
+                    break
+
+            # ── Fix persistent numbered profile name (UI display) via registry ──
+            if DEBUG_MODE:
+                print("[DEBUG] Fixing NetworkList profile name to remove numbering")
+
+            profile_fix_ps = (
+                r"$wgAdapter = Get-NetAdapter | Where-Object { $_.Name -eq '" + SERVICE_NAME + r"' -or $_.InterfaceDescription -like '*WireGuard*' } | Select-Object -First 1;"
+                r"if ($wgAdapter) {"
+                r"  $profilesPath = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\Profiles';"
+                r"  Get-ChildItem $profilesPath -ErrorAction SilentlyContinue | ForEach-Object {"
+                r"    $profile = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue;"
+                r"    if ($profile.ProfileName -like '*Shuriken*' -and ($profile.Guid -ne $null)) {"
+                r"      Set-ItemProperty -Path $_.PSPath -Name 'ProfileName' -Value '" + SERVICE_NAME + r"' -Force -ErrorAction SilentlyContinue;"
+                r"      Write-Output \"Updated profile $($profile.ProfileName) to " + SERVICE_NAME + r"\";"
+                r"    }"
+                r"  }"
+                r"} else { Write-Output 'No WireGuard adapter found for profile fix' }"
+            )
+
             try:
                 ctypes.windll.shell32.ShellExecuteW(
                     None, "runas",
                     "powershell.exe",
-                    '-Command "Get-NetAdapter | Where-Object {$_.InterfaceDescription -like \'*WireGuard*\'} | '
-                    'Rename-NetAdapter -NewName \'Shuriken\' -Confirm:$false -ErrorAction SilentlyContinue"',
+                    f'-NoProfile -ExecutionPolicy Bypass -Command "{profile_fix_ps}"',
                     None,
-                    0
+                    0  # SW_HIDE
                 )
                 if DEBUG_MODE:
-                    print("[DEBUG] Adapter rename requested silently via elevated PowerShell")
+                    print("[DEBUG] Profile name reset requested (elevated PowerShell)")
+                time.sleep(2.0)  # Allow registry + UI to settle
             except Exception as e:
                 if DEBUG_MODE:
-                    print(f"[DEBUG] Silent rename failed (non-critical): {e}")
+                    print(f"[DEBUG] Profile fix launch failed: {e}")
+
+            if not renamed and DEBUG_MODE:
+                print("[DEBUG] Rename did not succeed after 5 attempts — number may still appear")
+
             return True, None, saved
+
         time.sleep(0.2)
+
     remove_dns_leak_block()
     remove_kill_switch()
     return False, "Tunnel failed to start within 40 seconds.", None

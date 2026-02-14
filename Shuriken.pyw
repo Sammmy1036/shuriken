@@ -1,4 +1,4 @@
-# Shuriken v1.0.0.0 by Sammmy1036
+# Shuriken VPN v1.0.0.0 by Sammmy1036
 
 __version__ = "1.0.0.0"
 
@@ -20,8 +20,13 @@ from network import (_ps, _list_non_wg_adapters, add_dns_leak_block, remove_dns_
 add_kill_switch, remove_kill_switch, disable_ipv6_on_non_wg_adapters, enable_ipv6_on_non_wg_adapters,
 reset_firewall_if_blocked)
 from utils import (acquire_mutex, safe_messagebox, is_admin, read_registry, write_registry, AdapterWatcher)
-from constants import (setup_runtime_paths, get_wg_paths, APP_DIR, BUNDLED_BASE_DIR, ICON_PATH, CONFIG_DIR, APP_NAME, CONFIG_NAME, SERVICE_NAME, REG_PATH, REG_VAL, ASSETS_DIR, LOCKED_OVERLAY_PATH, UNLOCKED_OVERLAY_PATH, FLAGS_DIR, 
-FLAG_CACHE, THEME_PATH, STATE_DIR, WG_PROGDATA, WG_DIR, WG_EXE, WG_CLI, DEBUG_MODE)
+from constants import (
+    setup_runtime_paths, get_wg_paths, APP_DIR, BUNDLED_BASE_DIR, ICON_PATH, CONFIG_DIR,
+    APP_NAME, CONFIG_NAME, SERVICE_NAME, REG_PATH, REG_VAL, ASSETS_DIR,
+    LOCKED_OVERLAY_PATH, UNLOCKED_OVERLAY_PATH, FLAGS_DIR, FLAG_CACHE, THEME_PATH,
+    STATE_DIR, WG_PROGDATA, WG_DIR, WG_EXE, WG_CLI, DEBUG_MODE,
+    STEALTH_PORT_ENABLED, DEFAULT_STEALTH_PORT
+)
 from wireguard import (validate_config_has_dns, copy_conf_to_progdata, is_vpn_up, vpn_up_nogui, vpn_down_nogui,
 switch_server_nogui, pretty_name_for, list_conf_files, repair_network_stack_if_stuck, run_adapter_repair_sequence,
 cleanup_stale_wireguard_service)
@@ -59,65 +64,86 @@ except Exception:
     _HAVE_PIL_IMAGETK = False
 
 # -------------------------- Tray icons ---------------------------
-def _load_base_icon(size: int):
-    if ICON_PATH is None or not ICON_PATH.exists() or Image is None:
+def _load_base_icon(size: int) -> PILImage.Image | None:
+    if ICON_PATH is None or not ICON_PATH.exists():
         return None
-
     try:
-        with Image.open(ICON_PATH) as ico:
-            ico_sizes = ico.info.get('sizes', [(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
-            best_size = max((s for s in ico_sizes if s[0] >= size), key=lambda s: s[0], default=(256,256))
+        with PILImage.open(ICON_PATH) as ico:
+            # ico_sizes might not exist if not ICO; fallback to common sizes
+            ico_sizes = ico.info.get('sizes', [(size, size) for size in [16, 32, 48, 64, 128, 256]])
+            # Pick largest available >= requested size, or biggest overall
+            best_size = max(
+                (s for s in ico_sizes if s[0] >= size),
+                key=lambda s: s[0],
+                default=max(ico_sizes, key=lambda s: s[0], default=(256, 256))
+            )
             ico.load()
-            img = ico.resize((size, size), PILImage.LANCZOS if size < best_size[0] else PILImage.NEAREST)
-            return img.convert("RGB")
-    except Exception:
+            resized = ico.resize((size, size), PILImage.LANCZOS)
+            return resized.convert("RGBA")
+    except Exception as e:
+        print(f"Base icon load failed for size {size}: {e}")
         try:
-            img = Image.open(ICON_PATH).convert("RGBA")
-            return img.resize((size, size), PILImage.LANCZOS).convert("RGB")
+            # Fallback: load as regular image
+            img = PILImage.open(ICON_PATH).convert("RGBA")
+            return img.resize((size, size), PILImage.LANCZOS)
         except Exception:
             return None
 
-def _add_corner_png_overlay(base_img, overlay_path: Path):
-    if base_img is None or Image is None:
-        return base_img
+def _add_corner_png_overlay(base_img: PILImage.Image | None, overlay_path: Path) -> PILImage.Image | None:
+    if base_img is None:
+        return None
     try:
-        overlay = Image.open(overlay_path).convert("RGBA")
+        overlay = PILImage.open(overlay_path).convert("RGBA")
     except Exception as e:
-        print(f"Overlay load failed: {e}")
+        print(f"Overlay load failed ({overlay_path}): {e}")
         return base_img
-    img = base_img.copy().convert("RGBA")
+
+    img = base_img.copy()  # Already RGBA
     w, h = img.size
-    frac = 0.50
-    pad_frac = 0.04 
-    d = max(int(min(w, h) * frac), 6) 
+    frac = 0.50       # Overlay size fraction
+    pad_frac = 0.04   # Padding from edge
+    d = max(int(min(w, h) * frac), 8)  # Min 8px to avoid tiny overlays
     pad = int(min(w, h) * pad_frac)
+
     overlay_resized = overlay.resize((d, d), PILImage.LANCZOS)
     x = w - pad - d
     y = pad
-    img.paste(overlay_resized, (x, y), overlay_resized)
-    return img.convert("RGB")
+    img.paste(overlay_resized, (x, y), overlay_resized)  # Use mask=overlay itself for alpha
+
+    return img  # Keep as RGBA
 
 def get_tray_images():
-    if Image is None:
+    if PILImage is None:
         return None, None
-    small_sz = 20
-    big_sz   = 32
-    base_s = _load_base_icon(small_sz)
-    base_b = _load_base_icon(big_sz)
-    if base_s is None or base_b is None:
+
+    # Recommended sizes for modern high-DPI Windows tray (effective pixels often 20–48 px)
+    sizes = [24, 40, 48, 64, 96]  # Start with these; add 32 or 96 if needed
+    green_locked = {}
+    red_unlocked = {}
+
+    for sz in sizes:
+        base = _load_base_icon(sz)
+        if base is None:
+            continue
+
+        green_locked[sz] = _add_corner_png_overlay(base, LOCKED_OVERLAY_PATH)
+        red_unlocked[sz] = _add_corner_png_overlay(base, UNLOCKED_OVERLAY_PATH)
+
+    if not green_locked or not red_unlocked:
         return None, None
-    # Green locked.png in corner
-    green_locked_s = _add_corner_png_overlay(base_s, LOCKED_OVERLAY_PATH)
-    green_locked_b = _add_corner_png_overlay(base_b, LOCKED_OVERLAY_PATH)
-    # Red unlocked.png in corner
-    red_unlocked_s = _add_corner_png_overlay(base_s, UNLOCKED_OVERLAY_PATH)
-    red_unlocked_b = _add_corner_png_overlay(base_b, UNLOCKED_OVERLAY_PATH)
-    return (green_locked_s, green_locked_b), (red_unlocked_s, red_unlocked_b)
+    largest_sz = max(sizes)
+    return (
+        green_locked[largest_sz],
+        green_locked
+    ), (
+        red_unlocked[largest_sz],
+        red_unlocked
+    )
 
 # -------------------------- UI -----------------------------------
 class App:
 
-    ECHOIP_URL = "http://45.149.154.247:9090/json"  # ← update with real IP
+    ECHOIP_URL = "http://45.149.154.247:9090/json"  # Change to whatever server is hosting IPASNGeoLoc 
 
     def force_refresh_tray_icon(self):
         if not self.tray_icon:
@@ -131,7 +157,7 @@ class App:
     def __init__(self, root: tk.Tk):
         self.root = root
         self._ip_detect_stop = threading.Event()
-        self.root.title("Shuriken")
+        self.root.title("Shuriken VPN") # Window Title of Application
         self.root.geometry("1000x620")
         self.root.resizable(False, False)
         self.set_window_icon()
@@ -164,16 +190,16 @@ class App:
         # Load button images from assets folder (size reduced for floating buttons)
         self.killswitch_img = CTkImage(light_image=PILImage.open(ASSETS_DIR / "killswitch.png"),
                                       dark_image=PILImage.open(ASSETS_DIR / "killswitch.png"),
-                                      size=(36, 36))
+                                      size=(50, 50))
         self.splittunnel_img = CTkImage(light_image=PILImage.open(ASSETS_DIR / "splittunneling.png"),
                                         dark_image=PILImage.open(ASSETS_DIR / "splittunneling.png"),
-                                        size=(36, 36))
+                                        size=(50, 50))
         self.tor_img = CTkImage(light_image=PILImage.open(ASSETS_DIR / "tor.png"),
                                 dark_image=PILImage.open(ASSETS_DIR / "tor.png"),
-                                size=(36, 36))
+                                size=(50, 50))
         self.settings_img = CTkImage(light_image=PILImage.open(ASSETS_DIR / "settings.png"),
                                      dark_image=PILImage.open(ASSETS_DIR / "settings.png"),
-                                     size=(36, 36))
+                                     size=(50, 50))
 
         # ===================== CENTER MAIN FRAME (for overlay) =====================
         self.main_frame = ctk.CTkFrame(self.root, corner_radius=0, fg_color="transparent")
@@ -181,9 +207,8 @@ class App:
 
         # ===================== OVERLAY BUTTONS ON THE RIGHT EDGE (with labels) =====================
         self.overlay_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.overlay_frame.place(relx=1.0, x=-40, rely=0.5, anchor="e")  # Slightly more space for labels
+        self.overlay_frame.place(relx=1.04, x=-40, rely=0.45, anchor="e")  # Slightly more space for labels
 
-        # Helper function to create a button + label pair
         def create_feature_button(image, command, label_text):
             frame = ctk.CTkFrame(self.overlay_frame, fg_color="transparent")
             frame.pack(pady=12)  # Vertical spacing between features
@@ -192,11 +217,11 @@ class App:
                 frame,
                 text="",
                 image=image,
-                width=52,
-                height=52,
+                width=64,
+                height=64,
                 corner_radius=20,
-                fg_color="#1f1f1f",
-                hover_color="#3a3a3a",
+                fg_color="#2D2D2D",
+                hover_color="#333333",
                 command=command
             )
             btn.pack()
@@ -204,7 +229,7 @@ class App:
             label = ctk.CTkLabel(
                 frame,
                 text=label_text,
-                font=ctk.CTkFont(family="Segoe UI", size=11, weight="normal"),
+                font=ctk.CTkFont(family="AniMe Vision - MB_EN", size=11, weight="normal"),
                 text_color="#BBBBBB"
             )
             label.pack(pady=(4, 0))
@@ -222,7 +247,7 @@ class App:
         self.left_sidebar = CTkFrame(self.root, width=280, corner_radius=0)
         self.left_sidebar.grid(row=0, column=0, sticky="nswe")
         self.left_sidebar.grid_propagate(False)
-        title_label = CTkLabel(self.left_sidebar, text="Servers", font=("Segoe UI", 16, "bold"), pady=15)
+        title_label = CTkLabel(self.left_sidebar, text="Servers", font=("AniMe Vision - MB_EN", 16, "bold"), pady=15)
         title_label.pack()
         self.search_var = tk.StringVar()
         self.search_entry = CTkEntry(
@@ -238,7 +263,7 @@ class App:
         if icon_path.exists():
             search_img = CTkImage(light_image=PILImage.open(icon_path),
                                   dark_image=PILImage.open(icon_path),
-                                  size=(22, 22))
+                                  size=(27, 27))
         else:
             search_img = None
         if search_img:
@@ -272,7 +297,7 @@ class App:
         if ICON_PATH.exists():
             try:
                 pil_img = PILImage.open(ICON_PATH).convert("RGBA")
-                max_width = 72
+                max_width = 100
                 if pil_img.width > max_width:
                     ratio = min(1.0, max_w / pil_img.width)
                     new_size = (max_width, int(pil_img.height * ratio))
@@ -283,8 +308,8 @@ class App:
 
         if self.logo_img:
             ctk.CTkLabel(self.main_content, image=self.logo_img, text="").pack(pady=(10, 2))
-
-        self.header = ctk.CTkLabel(self.main_content, text="Shuriken", font=("Segoe UI", 16, "bold"))
+        # Main page Shuriken VPN text
+        self.header = ctk.CTkLabel(self.main_content, text="Shuriken VPN", font=("AniMe Vision - MB_EN", 16))
         self.header.pack(pady=(8, 8))
 
         self.status = ctk.CTkLabel(self.main_content, text="Disconnected", font=("Segoe UI", 10, "bold"))
@@ -294,7 +319,7 @@ class App:
             self.main_content,
             text="Connect",
             command=self.toggle,
-            font=("Segoe UI", 16, "bold"),
+            font=("AniMe Vision - MB_EN", 16),
             width=200,
             height=60,
             corner_radius=12,
@@ -320,8 +345,8 @@ class App:
 
         self.protection_status = ctk.CTkLabel(
             bottom_frame,
-            text="🔓 Unprotected",
-            font=ctk.CTkFont(family="Arial", size=32, weight="bold"),
+            text="Unprotected",
+            font=ctk.CTkFont(family="AniMe Vision - MB_EN", size=25),
             text_color="#f44336",
             anchor="w",
             justify="left"
@@ -390,11 +415,11 @@ class App:
                 pass
         self.load_server_list()
         self.transient_status.configure(text="Checking connection status…")
-        self.protection_status.configure(text="⌛ Detecting", text_color="#FFFF00")
+        self.protection_status.configure(text="Detecting", text_color="#FFFF00")
         self.btn.configure(text="Connect")
         self.location_var.set("Location:\nDetecting...")
         if is_vpn_up():
-            self.protection_status.configure(text="🔒 Protected", text_color="#00FF00")
+            self.protection_status.configure(text="Protected", text_color="#00FF00")
             print(f"Protected Label Update 1")
             self.transient_status.configure(text="Connection Secure & Encrypted")
             self.btn.configure(text="Disconnect")
@@ -408,7 +433,7 @@ class App:
 
     def open_killswitch(self):
         messagebox.showinfo(
-            "Kill Switch",
+            "Shuriken VPN",
             "Full Kill Switch is already built-in and active when connected!\n\n"
             "Blocks all internet traffic if the VPN connection drops unexpectedly.",
             parent=self.root
@@ -416,35 +441,44 @@ class App:
 
     def open_splittunneling(self):
         messagebox.showinfo(
-            "Split Tunneling",
+            "Shuriken VPN",
             "Split Tunneling is not yet implemented.\n\n"
             "Your current setup uses a full tunnel with kill switch protection.",
             parent=self.root
         )
 
     def launch_tor_browser(self):
-        # Tor Browser will always be bundled in Resources/tor-windows (on Windows) or Resources/tor-linux (on Linux)
-        resources_dir = BUNDLED_BASE_DIR / "Resources"  
-        if not resources_dir.exists():
-            resources_dir = APP_DIR / "Resources"  
+        # Determine the correct base directory (works in both dev and PyInstaller one-file mode)
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            # Running as PyInstaller one-file or one-dir bundle → use the temp extraction folder
+            base_dir = Path(sys._MEIPASS)
+        else:
+            # Running from source (development)
+            base_dir = Path(os.path.dirname(os.path.abspath(__file__)))  # or replace with your APP_DIR / BUNDLED_BASE_DIR logic if needed
+
+        resources_dir = base_dir / "Resources"
 
         if sys.platform.startswith("win"):
-            tor_root = resources_dir / "tor-windows"
+            tor_root = resources_dir / "tor-windows" / "Tor Browser"
             firefox_exe = tor_root / "Browser" / "firefox.exe"
-        else:  # Assume Linux (or other Unix-like)
-            tor_root = resources_dir / "tor-linux"
-            firefox_exe = tor_root / "Browser" / "firefox"  # No .exe on Linux
+        else:
+            # Optional: add linux/mac support later if needed
+            tor_root = resources_dir / "tor-linux" / "Tor Browser"  # adjust structure if different on other platforms
+            firefox_exe = tor_root / "Browser" / "firefox"
 
         if not tor_root.exists() or not tor_root.is_dir():
             messagebox.showerror(
                 "Tor Browser Not Found",
-                "Official Tor Browser folder not found!\n\n"
-                f"Expected location: {resources_dir}\n"
-                "Inside it:\n"
-                " - tor-windows/ (extracted Windows Tor Browser)\n"
-                " - tor-linux/   (extracted Linux Tor Browser)\n\n"
-                f"Download latest stable (15.0.3 as of Dec 2025) from https://www.torproject.org/download/\n"
-                "Extract and place the full folder here.",
+                "Official Tor Browser folder not found in bundled resources!\n\n"
+                f"Expected location: {tor_root}\n\n"
+                "This usually means:\n"
+                "• The --add-data path in PyInstaller doesn't match the expected structure, or\n"
+                "• Case mismatch in folder names (Windows is case-insensitive, but Python .exists() is case-sensitive), or\n"
+                "• The Tor Browser folder was not fully included.\n\n"
+                "Current expected structure:\n"
+                "Resources/tor-windows/Tor Browser/Browser/firefox.exe\n\n"
+                "Check your PyInstaller command includes something like:\n"
+                "--add-data \"path/to/Resources;Resources\"",
                 parent=self.root
             )
             return
@@ -453,14 +487,16 @@ class App:
             messagebox.showerror(
                 "Tor Browser Error",
                 f"firefox executable not found at:\n{firefox_exe}\n\n"
-                "Make sure you extracted the full official Tor Browser bundle correctly into the platform folder.",
+                "The Tor Browser bundle appears incomplete or the folder names don't match exactly.\n\n"
+                "Expected full path:\n"
+                f"{resources_dir / 'tor-windows' / 'Tor Browser' / 'Browser' / 'firefox.exe'}",
                 parent=self.root
             )
             return
 
         if not getattr(self, "secure_connected", False):
             if not messagebox.askyesno(
-                "Shuriken",
+                "Shuriken VPN",
                 "For maximum privacy, it's recommended to use Tor over an active VPN.\n\n"
                 "This hides Tor usage from your ISP and adds an extra layer of protection.\n\n"
                 "Launch Official Tor Browser anyway?",
@@ -473,36 +509,56 @@ class App:
             creationflags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
             subprocess.Popen(
                 [str(firefox_exe)],
-                cwd=str(tor_root),
-                creationflags=creationflags
+                cwd=str(tor_root),               # ← This must point to the "Tor Browser" folder (contains Browser/)
+                creationflags=creationflags,
+                # stdout=subprocess.DEVNULL,     # optional
+                # stderr=subprocess.DEVNULL,
             )
         except Exception as e:
             messagebox.showerror(
                 "Launch Failed",
-                f"Could not start Official Tor Browser:\n\n{e}",
+                f"Could not start Official Tor Browser:\n\n{str(e)}",
                 parent=self.root
             )
 
     def open_settings(self):
         settings_win = ctk.CTkToplevel(self.root)
-        settings_win.title("Shuriken Settings")
+        settings_win.title("Shuriken VPN")
         settings_win.geometry("500x400")
         settings_win.resizable(False, False)
         settings_win.grab_set()
-        settings_win.update_idletasks()
-        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (500 // 2)
-        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - (400 // 2)
-        settings_win.geometry(f"+{x}+{y}")
-        ctk.CTkLabel(
+        ctk.CTkLabel(settings_win, text="Advanced Settings", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=30)
+        
+        stealth_var = tk.BooleanVar(value=STEALTH_PORT_ENABLED)
+
+        def toggle_stealth():
+            global STEALTH_PORT_ENABLED
+            STEALTH_PORT_ENABLED = stealth_var.get()
+            print("STEALTH_PORT_ENABLED port changed to:", STEALTH_PORT_ENABLED)
+            try:
+                import winreg
+                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Shuriken")
+                winreg.SetValueEx(key, "StealthPort", 0, winreg.REG_DWORD, int(STEALTH_PORT_ENABLED))
+                winreg.CloseKey(key)
+            except:
+                pass
+
+        ctk.CTkCheckBox(
             settings_win,
-            text="Advanced Settings",
-            font=ctk.CTkFont(size=20, weight="bold")
-        ).pack(pady=30)
-        ctk.CTkLabel(
-            settings_win,
-            text="More options coming soon...",
-            text_color="gray"
-        ).pack(pady=10)
+            text="Use stealth port 443 (better obfuscation against ISP DPI)",
+            variable=stealth_var,
+            command=toggle_stealth,
+            border_width=2,
+            border_color=("gray70", "gray50"),
+            fg_color=("gray80", "gray30"),
+            hover_color=("gray60", "gray40"),
+            checkmark_color=("white", "black"),
+            text_color=("black", "white"),
+            text_color_disabled=("gray50", "gray60"),
+            corner_radius=6
+        ).pack(pady=10, padx=20, anchor="w")
+
+        ctk.CTkLabel(settings_win, text="More options coming soon...", text_color="gray").pack(pady=20)
 
     # ------------------------------------------------------------------
     #  Internet Connectivity Monitor (runs ONLY when VPN is secure)
@@ -853,7 +909,7 @@ class App:
             self.switch_server(conf_path)
         else:
             meta = SERVER_METADATA.get(conf_path.name, {"name": conf_path.stem})
-            safe_messagebox("info", "Shuriken", f"Default Server Set To: {meta.get('name')}", parent=self.root)
+            safe_messagebox("info", "Shuriken VPN", f"Default Server Set To: {meta.get('name')}", parent=self.root)
 
         self.load_server_list()
 
@@ -949,7 +1005,7 @@ class App:
                 return ip, provider, country
 
             except Exception as e:
-                if DEBUG_MODE:  # assuming DEBUG_MODE is defined somewhere
+                if DEBUG_MODE:
                     print(f"[DEBUG] echoip request failed: {e}")
                 return None, None, None
 
@@ -958,7 +1014,7 @@ class App:
                 self.ip_var.set(f"Your IP Address:\n{ip} ({state})"),
                 self.provider_var.set(f"Provider:\n{provider}"),
                 self.location_var.set(f"Location:\n{country}"),
-                self.protection_status.configure(text="🔒 Protected", text_color="#00FF00"),
+                self.protection_status.configure(text="Protected", text_color="#00FF00"),
                 print("Protected Label Update 2"),
                 self.transient_status.configure(text="Connection Secure & Encrypted"),
                 self.clear_busy(self.btn, "Disconnect", "#f44336") if state == "VPN" else None,
@@ -971,7 +1027,7 @@ class App:
                 self.provider_var.set(f"Provider:\n{provider}"),
                 self.location_var.set(f"Location:\n{country}"),
                 self.protection_status.configure(
-                    text="🔒 Protected" if protected else "🔓 Unprotected",
+                    text="Protected" if protected else "Unprotected",
                     text_color="#00FF00" if protected else "#f44336"
                 ),
                 print("Protected Label Update IP" if protected else "Unprotected Label Update IP"),
@@ -982,7 +1038,7 @@ class App:
                 self.ip_var.set("Your IP Address:\nDetecting..."),
                 self.provider_var.set("Provider:\nDetecting..."),
                 self.location_var.set("Location:\nDetecting..."),
-                self.protection_status.configure(text="⏳ Establishing", text_color="#FFFF00"),
+                self.protection_status.configure(text="Establishing", text_color="#FFFF00"),
                 self.transient_status.configure(text="Tunnel active. Connecting to internet..."),
                 self.clear_busy(self.btn, "Disconnect", "#f44336"),
             ))
@@ -992,7 +1048,7 @@ class App:
                 self.ip_var.set("Your IP Address:\nNot connected"),
                 self.provider_var.set("Provider:\n—"),
                 self.location_var.set("Location:\n—"),
-                self.protection_status.configure(text="🔓 Unprotected", text_color="#f44336"),
+                self.protection_status.configure(text="Unprotected", text_color="#f44336"),
                 print(f"Unprotected Label Updated 2"),
                 self.transient_status.configure(text="VPN tunnel not active"),
             ))
@@ -1002,7 +1058,7 @@ class App:
                 self.ip_var.set("Your IP Address:\nFailed to detect"),
                 self.provider_var.set("Provider:\nFailed to detect"),
                 self.location_var.set("Location:\nFailed to detect"),
-                self.protection_status.configure(text="🔓 Unprotected", text_color="#f44336"),
+                self.protection_status.configure(text="Unprotected", text_color="#f44336"),
                 print(f"Unprotected Label Updated 4"),
             ))
 
@@ -1276,12 +1332,11 @@ class App:
         was_up = False
         network_was_up = True
         last_check = time.time()
-
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.STARTF_USESHOWWINDOW | subprocess.STARTF_USESTDHANDLES
-        si.wShowWindow = SW_HIDE  # Explicitly hide (SW_HIDE = 0)
-        cf = CREATE_NO_WINDOW  # Preferred if available (Python 3.7+)
-
+        si.wShowWindow = SW_HIDE # Explicitly hide (SW_HIDE = 0)
+        cf = CREATE_NO_WINDOW # Preferred if available (Python 3.7+)
+        
         # Helper to run PowerShell commands completely hidden
         def run_ps_command(ps_command):
             full_cmd = [
@@ -1302,7 +1357,7 @@ class App:
                 return result.returncode == 0
             except Exception:
                 return False
-
+        
         # Helper to wait for a stable physical network with valid IP
         def wait_for_valid_ip(max_attempts=25, delay=3):
             for attempt in range(max_attempts):
@@ -1316,25 +1371,20 @@ class App:
                         creationflags=cf
                     )
                     output = result.stdout.lower()
-                    if ("ipv4 address" in output and 
-                        "169." not in output and 
+                    if ("ipv4 address" in output and
+                        "169." not in output and
                         "media disconnected" not in output):
                         return True
                 except Exception:
                     pass
                 time.sleep(delay)
             return False
-
+        
         while not getattr(self, "_watchdog_stop", threading.Event()).is_set():
-            now_up = False
-            try:
-                with socket.create_connection(("10.0.0.1", 53), timeout=2.0):
-                    now_up = True
-            except (socket.timeout, OSError, ConnectionRefusedError):
-                now_up = False
-
+            # Core VPN state check — now using reliable WireGuard detection
+            now_up = is_vpn_up()
             network_up = False
-
+            
             # --- Detect physical network availability (Ethernet/Wi-Fi) ---
             try:
                 result = subprocess.run(
@@ -1348,16 +1398,17 @@ class App:
                         break
             except Exception:
                 pass
-
+            
             # --- Detect system wake from sleep ---
             now = time.time()
             slept = (now - last_check) > 30
             last_check = now
+            
             if slept:
                 self.root.after(0, lambda: self.transient_status.configure(
                     text="Verifying Network Connection…"
                 ))
-
+                
                 # Wait for network stack to stabilize before repairs
                 if wait_for_valid_ip():
                     run_ps_command("Get-NetFirewallRule -DisplayName 'Shuriken*' | Remove-NetFirewallRule -Confirm:$false")
@@ -1366,23 +1417,30 @@ class App:
                     time.sleep(2)
                     run_ps_command("ipconfig /renew")
                     run_ps_command("ipconfig /flushdns")
-                    try:
-                        with socket.create_connection(("10.0.0.1", 53), timeout=2.0):
-                            now_up = True
-                    except:
-                        now_up = False
-
+                    
+                    # After repair → check real VPN state
+                    now_up = is_vpn_up()
+                    
                     if not now_up:
                         self.root.after(0, lambda: (
                             self.transient_status.configure(text="Resuming VPN after sleep…"),
                             self._attempt_auto_reconnect()
                         ))
+                    else:
+                        # Tunnel survived sleep → force connected UI state
+                        was_up = False  # ← this tricks the transition block below into firing
+                        self.root.after(0, lambda: self.fetch_and_display_ip("VPN", continuous=True))
+                        self.root.after(0, lambda: self.protection_status.configure(
+                            text="Protected", text_color="#00FF00"
+                        ))
+                
                 else:
                     self.root.after(0, lambda: self.transient_status.configure(
                         text="Resetting Connection..."
                     ))
+                
                 self.root.after(4000, self.force_refresh_tray_icon)
-
+            
             # --- Detect adapter restored after manual disable/enable ---
             if not network_was_up and network_up:
                 self.root.after(0, lambda: self.transient_status.configure(
@@ -1395,19 +1453,16 @@ class App:
                     time.sleep(2)
                     run_ps_command("ipconfig /renew")
                     run_ps_command("ipconfig /flushdns")
-                    try: 
-                        with socket.create_connection(("10.0.0.1", 53), timeout=2.0):
-                            now_up = True
-                    except: 
-                        now_up = False
-
+                    
+                    # After repair → check real VPN state
+                    now_up = is_vpn_up()
                     if not now_up:
                         self.root.after(0, lambda: self.transient_status.configure(
                             text="Reconnecting…"
                         ))
                         time.sleep(2)
                         self.root.after(0, self._attempt_auto_reconnect)
-
+            
             # --- Detect VPN drop while kill switch active ---
             if was_up and not now_up and network_up:
                 self.root.after(0, lambda: self.transient_status.configure(
@@ -1416,17 +1471,14 @@ class App:
                 self.root.after(0, lambda: self._update_tray_if_needed())
                 if getattr(self, "auto_reconnect", True):
                     time.sleep(5)
-                    try:
-                        with socket.create_connection(("10.0.0.1", 53), timeout=2.0):
-                            now_up = True
-                    except: 
-                        now_up = False
-
+                    now_up = is_vpn_up() # re-check after short delay
                     if not now_up:
                         self.root.after(0, lambda: (
                             self.transient_status.configure(text="Reconnecting..."),
                             self._attempt_auto_reconnect()
                         ))
+            
+            # --- Normal connection established (or forced after survived sleep) ---
             if not was_up and now_up:
                 self.root.after(0, lambda: (
                     self.transient_status.configure(text="Connection Secure & Encrypted"),
@@ -1435,7 +1487,7 @@ class App:
                 ))
                 self.root.after(1200, self.force_refresh_tray_icon)
                 self.root.after(1500, lambda: self.fetch_and_display_ip("VPN", continuous=True))
-               
+            
             was_up = now_up
             network_was_up = network_up
             time.sleep(3)
@@ -1532,7 +1584,7 @@ class App:
 
                         self.root.after(0, lambda: (
                             self.protection_status.configure(
-                                text="🔒 Protected",
+                                text="Protected",
                                 text_color="#00FF00"
                             ),
                             print("Protected Label Update 3"),
@@ -1557,14 +1609,14 @@ class App:
                         text="Secure your online activity by connecting to Shuriken VPN"
                     )
                     self.protection_status.configure(
-                        text="🔓 Unprotected",
+                        text="Unprotected",
                         text_color="#f44336"
                     )
                     print("Unprotected Label Updated 6")
                     self.clear_busy(self.btn, "Connect", "#4CAF50")
                     self.secure_connected = False
                     if err:
-                        messagebox.showerror("Shuriken", err, parent=self.root)
+                        messagebox.showerror("Shuriken VPN", err, parent=self.root)
                     self._update_tray_if_needed()
 
             self.run_async(task, done)
@@ -1598,7 +1650,7 @@ class App:
                         text="Secure your online activity by connecting to Shuriken VPN"
                     )
                     self.protection_status.configure(
-                        text="🔓 Unprotected",
+                        text="Unprotected",
                         text_color="#f44336"
                     )
                     print("Unprotected Label Updated 7")
@@ -1632,7 +1684,7 @@ class App:
     def switch_server(self, new_conf: Path):
         if not new_conf.is_file():
             messagebox.showerror(
-                "Shuriken",
+                "Shuriken VPN",
                 f"The selected config was not found:\n{new_conf}",
                 parent=self.root,
             )
@@ -1644,14 +1696,14 @@ class App:
             new_conf_resolved = new_conf.resolve(strict=True)
         except FileNotFoundError:
             messagebox.showerror(
-                "Shuriken",
+                "Shuriken VPN",
                 f"Config file does not exist:\n{new_conf}",
                 parent=self.root,
             )
             return
         except Exception as e:
             messagebox.showerror(
-                "Shuriken",
+                "Shuriken VPN",
                 f"Cannot resolve config path (symlink/perm issue):\n{new_conf}\n\n{e}",
                 parent=self.root,
             )
@@ -1660,7 +1712,7 @@ class App:
         if (config_dir_resolved not in new_conf_resolved.parents and
             new_conf_resolved != config_dir_resolved):
             messagebox.showerror(
-                "Shuriken",
+                "Shuriken VPN",
                 f"Config must be inside the Config folder.\n\n"
                 f"Allowed : {config_dir_resolved}\n"
                 f"Rejected: {new_conf_resolved}",
@@ -1670,7 +1722,7 @@ class App:
 
         if not validate_config_has_dns(new_conf):
             messagebox.showerror(
-                "Shuriken",
+                "Shuriken VPN",
                 f"Config is missing DNS setting:\n{new_conf.name}\n\n"
                 "Add this line under [Interface]:\n"
                 "DNS = 10.0.0.1",
@@ -1725,7 +1777,7 @@ class App:
                     baseline_ip = getattr(self, '_last_detected_ip', None)
                     if current_ip and not current_ip.startswith(("10.", "100.64.", "192.168.", "172.")):
                         self.root.after(0, lambda: (
-                            self.protection_status.configure(text="🔒 Protected", text_color="#00FF00"),
+                            self.protection_status.configure(text="Protected", text_color="#00FF00"),
                             print(f"Protected Label Update 4 - quick path"),
                             self.transient_status.configure(text="Connection Secure & Encrypted"),
                             setattr(self, "secure_connected", True),
@@ -1751,10 +1803,10 @@ class App:
 
             else:
                 self.transient_status.configure(text="Secure your online activity by connecting to Shuriken VPN")
-                self.protection_status.configure(text="🔓 Unprotected", text_color="#f44336")
+                self.protection_status.configure(text="Unprotected", text_color="#f44336")
                 print(f"Unprotected Label Updated 8")
                 if err:
-                    messagebox.showerror("Shuriken", err, parent=self.root)
+                    messagebox.showerror("Shuriken VPN", err, parent=self.root)
                 self._update_tray_if_needed()
 
         self.run_async(task, done)
@@ -1766,7 +1818,7 @@ def safe_run_main():
         ts = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
         try:
             with open("Shuriken_Log.txt", "a", encoding="utf-8") as f:
-                f.write(f"{ts} === Shuriken Started ===\n")
+                f.write(f"{ts} === Shuriken VPN Started ===\n")
         except Exception:
             pass
     try:
@@ -1794,10 +1846,11 @@ def main():
             from datetime import datetime
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open("Shuriken_Log.txt", "w", encoding="utf-8") as f:  # "w" = overwrite
-                f.write(f"[{ts}] Shuriken v{__version__} initialized!\n")
+                f.write(f"[{ts}] Shuriken VPN v{__version__} initialized!\n")
             print("Log file cleared and new session started.")
         except Exception as e:
             print(f"Could not clear log file: {e}")
+
     def dbg(msg):
         if DEBUG_MODE:
             from datetime import datetime
@@ -1810,6 +1863,55 @@ def main():
     try:
         root = ctk.CTk()
         ctk.set_appearance_mode("dark")
+        if ICON_PATH.exists():
+            try:
+                root.iconbitmap(default=str(ICON_PATH.resolve()))
+                if DEBUG_MODE:
+                    dbg("Applied icon via iconbitmap (multi-size .ico)")
+                print("Applied icon via iconbitmap")
+            except Exception as e1:
+                if DEBUG_MODE:
+                    dbg(f"iconbitmap failed: {e1}")
+                print(f"iconbitmap failed: {e1}")
+
+                try:
+                    from PIL import Image, ImageTk
+                    pil_img = Image.open(ICON_PATH)
+
+                    ico_sizes = getattr(pil_img, 'info', {}).get('sizes', [])
+                    preferred = [(64,64), (48,48), (32,32), (256,256)]
+                    selected_size = None
+
+                    for sz in preferred:
+                        if sz in ico_sizes:
+                            selected_size = sz
+                            break
+
+                    if not selected_size and ico_sizes:
+                        selected_size = max(ico_sizes, key=lambda s: s[0])
+
+                    if selected_size:
+                        pil_img.load()
+                        resized = pil_img.resize(selected_size, Image.Resampling.LANCZOS).convert("RGBA")
+                        photo = ImageTk.PhotoImage(resized)
+                        root.iconphoto(True, photo)
+                        root._icon_ref = photo
+                        if DEBUG_MODE:
+                            dbg(f"Applied icon via iconphoto (size {selected_size})")
+                        print(f"Applied icon via iconphoto (size {selected_size})")
+                    else:
+                        if DEBUG_MODE:
+                            dbg("No usable size found in .ico file")
+                        print("No usable size found in .ico")
+                except Exception as e2:
+                    if DEBUG_MODE:
+                        dbg(f"iconphoto fallback also failed: {e2}")
+                    print(f"iconphoto fallback failed: {e2}")
+        else:
+            if DEBUG_MODE:
+                dbg("Icon file not found: " + str(ICON_PATH))
+            print("Icon file not found")
+
         if THEME_PATH.exists():
             try:
                 ctk.set_default_color_theme(str(THEME_PATH))
@@ -1822,17 +1924,10 @@ def main():
             if DEBUG_MODE:
                 dbg(f"shuriken_theme.json not found, using built-in dark-blue theme")
             ctk.set_default_color_theme("dark-blue")
-        try:
-            if ICON_PATH.exists():
-                root.iconbitmap(str(ICON_PATH.resolve()))
-            else:
-                dbg("Icon file not found")
-        except Exception as e:
-            dbg(f"Icon load failed: {e}")
 
         if not is_admin():
             result = messagebox.askyesno(
-                "Shuriken",
+                "Shuriken VPN",
                 "Admin Rights Required.\n\n"
                 "DNS leak protection requires Administrator privileges.\n\n"
                 "Run as Administrator for full privacy protection?\n\n"
@@ -1840,7 +1935,7 @@ def main():
                 icon="warning"
             )
             if not result:
-                safe_messagebox("info", "Shuriken", "Running with limited DNS protection.")
+                safe_messagebox("info", "Shuriken VPN", "Running with limited DNS protection.")
             else:
                 try:
                     ctypes.windll.shell32.ShellExecuteW(
@@ -1849,22 +1944,27 @@ def main():
                 except Exception:
                     pass
                 return
+
         if not acquire_mutex("Global\\ShurikenInstanceLock"):
-            messagebox.showwarning("Shuriken", "Shuriken is already running.")
+            messagebox.showwarning("Shuriken VPN", "Shuriken is already running.")
             return
+
         WG_PROGDATA, WG_DIR, WG_EXE, WG_CLI = get_wg_paths()
         msi_path = (BUNDLED_BASE_DIR / "Resources" / "wireguard-amd64-0.5.3.msi").resolve()
         log_path = Path(os.environ.get("TEMP", ".")) / "Shuriken_installer.log"
+
         app = App(root)
         root.after(0, app.center_on_screen)
         root.deiconify()
         root.mainloop()
         dbg("Mainloop exited normally")
+
     except Exception:
         if DEBUG_MODE:
             from datetime import datetime
             ts = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
             with open("Shuriken_Log.txt", "a", encoding="utf-8") as f:
                 f.write(f"{ts} EXCEPTION:\n" + traceback.format_exc() + "\n")
+
 if __name__ == "__main__":
     safe_run_main()

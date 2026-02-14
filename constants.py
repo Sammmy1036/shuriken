@@ -2,6 +2,9 @@ import sys
 import os
 from pathlib import Path
 
+STEALTH_PORT_ENABLED = False
+DEFAULT_STEALTH_PORT = 443
+
 # -------------------------- Paths --------------------------------
 def setup_runtime_paths():
     global APP_DIR, BUNDLED_BASE_DIR, ICON_PATH, CONFIG_DIR
@@ -17,9 +20,9 @@ def setup_runtime_paths():
             BUNDLED_BASE_DIR = APP_DIR
 
         # --- Icon path resolution ---
-        ICON_PATH = BUNDLED_BASE_DIR / "Icons" / "PG.ico"
+        ICON_PATH = BUNDLED_BASE_DIR / "assets" / "shuriken.ico"
         if not ICON_PATH.exists():
-            ICON_PATH = APP_DIR / "Icons" / "PG.ico"
+            ICON_PATH = APP_DIR / "assets" / "shuriken.ico"
 
         # --- Prefer Config folder next to the executable ---
         external_config = APP_DIR / "Config"
@@ -47,7 +50,7 @@ def setup_runtime_paths():
 
 setup_runtime_paths()
 DEBUG_MODE   = True
-APP_NAME     = "Shuriken"
+APP_NAME     = "Shuriken VPN"
 CONFIG_NAME  = "Shuriken.conf"
 SERVICE_NAME = Path(CONFIG_NAME).stem
 REG_PATH     = r"Software\Shuriken"

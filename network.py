@@ -1,4 +1,4 @@
-import subprocess, time, socket, atexit, os, sys
+import subprocess, time, socket, atexit, os, sys, ctypes
 from pathlib import Path
 from typing import List
 from constants import DEBUG_MODE
