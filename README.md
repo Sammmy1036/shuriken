@@ -105,9 +105,12 @@ No user data is sold or provided to any third party or government agency. The on
 
 | Date | Event |
 |------|-------|
+| 2026-05-27 | Updates to GeoLite2 City Data for IPs in California Region of the United States of America. |
+| 2026-05-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
+| 2026-04-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
+| 2026-03-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
 | 2026-02-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
-| 2026-01-15 | Zero data requests or subpoenas received that could be actioned. |
-| 2025-12-20 | Enforced `tmpfs` mounts on logging and config directories in bootstrap image. |
+| 2026-01-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
 
 We publish any future compelled data requests in this section.
 
@@ -124,7 +127,7 @@ Questions → open an issue.
 ### Option 1: Run from Source (Recommended for testing)
 
 ```bash
-git clone https://github.com/yourusername/shuriken.git
+git clone https://github.com/sammmy1036/shuriken.git
 cd shuriken
 
 # Recommended: create a virtual environment
@@ -139,7 +142,7 @@ python Shuriken.pyw
 
 ### Option 2: Run the Pre-built Executable
 
-Download the latest release from the [Releases](https://github.com/yourusername/shuriken/releases) page.  
+Download the latest release from the [Releases](https://github.com/sammmy1036/shuriken/releases) page. Not posted to releases yet.  
 Run `ShurikenVPN.exe` as Administrator.  
 WireGuard and Tor Browser are bundled — no separate installs needed.
 
