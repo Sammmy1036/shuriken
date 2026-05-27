@@ -21,12 +21,17 @@ def _emergency_firewall_cleanup():
     """
     atexit handler: remove all Shuriken firewall rules if the process exits
     unexpectedly. Without this, stale rules block all traffic on next launch.
+
+    Includes remove_split_tunnel() so that split-tunnel Allow rules don't
+    survive a crash and leak traffic outside the VPN on the next session.
     """
     try:
         remove_kill_switch()
         remove_dns_leak_block()
         remove_wpad_block()
         enable_ipv6_on_non_wg_adapters()
+        from network import remove_split_tunnel
+        remove_split_tunnel()
     except Exception:
         pass
 
@@ -469,10 +474,15 @@ def service_registry_exists(name: str) -> bool:
 
 def purge_stale_network_profiles():
     """
-    Delete all Shuriken-named NetworkList profile entries from the registry.
-    Windows appends " 2", " 3" etc. when it sees what it thinks is a new
-    network. Deleting before tunnel-up forces Windows to create a fresh profile
-    with the bare service name.
+    Delete all Shuriken-named WireGuard NetworkList profile entries from the
+    registry. Windows appends " 2", " 3" etc. when it sees what it thinks is a
+    new network. Deleting before tunnel-up forces Windows to create a fresh
+    profile with the bare service name.
+
+    Guard: only delete profiles whose Category is 0 (Public / unidentified) AND
+    whose Name starts with SERVICE_NAME. This prevents a timing race during
+    NLA re-evaluation from accidentally deleting a real Wi-Fi network profile
+    (e.g. "Shibuya Ku") that briefly shares a registry slot.
     """
     profiles_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Profiles"
     deleted = []
@@ -497,11 +507,30 @@ def purge_stale_network_profiles():
                             profile_name, _ = winreg.QueryValueEx(sk, "ProfileName")
                         except OSError:
                             continue
-                    if isinstance(profile_name, str) and profile_name.startswith(SERVICE_NAME):
-                        winreg.DeleteKey(profiles_key, subkey_name)
-                        deleted.append(profile_name)
-                        if DEBUG_MODE:
-                            print(f"[PROFILE] Deleted stale profile: '{profile_name}' ({subkey_name})")
+
+                        # Only touch profiles whose name starts with our service name
+                        if not (isinstance(profile_name, str)
+                                and profile_name.startswith(SERVICE_NAME)):
+                            continue
+
+                        # Extra guard: WireGuard tunnel profiles are always
+                        # Category 0 (Public/unidentified). Real user Wi-Fi networks
+                        # are typically Category 1 (Private) or 2 (Domain). Skip
+                        # anything that looks like a real network profile.
+                        try:
+                            category, _ = winreg.QueryValueEx(sk, "Category")
+                            if category != 0:
+                                if DEBUG_MODE:
+                                    print(f"[PROFILE] Skipping '{profile_name}' "
+                                          f"— Category={category} (not a tunnel profile)")
+                                continue
+                        except OSError:
+                            pass  # No Category key — safe to proceed
+
+                    winreg.DeleteKey(profiles_key, subkey_name)
+                    deleted.append(profile_name)
+                    if DEBUG_MODE:
+                        print(f"[PROFILE] Deleted stale profile: '{profile_name}' ({subkey_name})")
                 except Exception as e:
                     if DEBUG_MODE:
                         print(f"[PROFILE] Could not process subkey '{subkey_name}': {e}")
@@ -521,7 +550,15 @@ def _fix_numbered_profiles():
     Rename any 'ShurikenVPN 2', 'ShurikenVPN 14', etc. profile entries back
     to the bare service name. Called post-connect by both vpn_up_nogui and
     switch_server_nogui.
+
+    Sleep briefly first: Windows NLA (Network Location Awareness) re-evaluates
+    ALL active connections when a new tunnel adapter appears. Touching the
+    registry while NLA is mid-scan can cause it to reassign profile GUIDs for
+    unrelated adapters (e.g. rename "Shibuya Ku" → "Network 2"). Waiting 2 s
+    gives NLA time to settle before we make any writes.
     """
+    time.sleep(2.0)   # let NLA settle before touching NetworkList registry
+
     profiles_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Profiles"
     try:
         with winreg.OpenKey(
@@ -549,6 +586,17 @@ def _fix_numbered_profiles():
                         if (isinstance(profile_name, str)
                                 and profile_name.startswith(SERVICE_NAME)
                                 and profile_name != SERVICE_NAME):
+                            # Same Category guard as purge_stale_network_profiles:
+                            # only rename tunnel (Category 0) profiles.
+                            try:
+                                category, _ = winreg.QueryValueEx(sk, "Category")
+                                if category != 0:
+                                    if DEBUG_MODE:
+                                        print(f"[PROFILE] Skipping rename of '{profile_name}' "
+                                              f"— Category={category}")
+                                    continue
+                            except OSError:
+                                pass
                             winreg.SetValueEx(sk, "ProfileName", 0, winreg.REG_SZ, SERVICE_NAME)
                             if DEBUG_MODE:
                                 print(f"[PROFILE] Renamed '{profile_name}' → '{SERVICE_NAME}'")
