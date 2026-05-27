@@ -48,7 +48,7 @@ Shuriken is a Windows VPN client that uses **official WireGuard** under the hood
 
 | Component | Version | License |
 |-----------|---------|---------|
-| WireGuard for Windows | 0.5.3 (amd64) | GPL v3 |
+| WireGuard for Windows | 1.1 (amd64) | GPL v3 |
 | Tor Browser | Latest bundled | GPL v3 |
 
 > WireGuard® is a registered trademark of Jason A. Donenfeld.  
