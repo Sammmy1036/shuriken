@@ -59,7 +59,7 @@ The Software bundles the following third-party components. Each is subject to it
 
 ### 5.1 WireGuard
 
-WireGuard (wireguard-amd64-0.5.3.msi) is bundled with and installed by the Software for the purpose of creating encrypted VPN tunnels. WireGuard is licensed under the GNU General Public License v3 (see Section 12). The Software installs the WireGuard tunnel service, manages its lifecycle, and removes it upon disconnection or exit.
+WireGuard (wireguard-amd64-1.1.msi) is bundled with and installed by the Software for the purpose of creating encrypted VPN tunnels. WireGuard is licensed under the GNU General Public License v3 (see Section 12). The Software installs the WireGuard tunnel service, manages its lifecycle, and removes it upon disconnection or exit.
 
 ### 5.2 Tor Browser
 
@@ -224,7 +224,7 @@ If any provision of this Agreement is held to be invalid or unenforceable, that 
 
 This Software bundles and distributes components licensed under the **GNU General Public License, Version 3** ("GPL v3"), including:
 
-- **WireGuard** (wireguard-amd64-0.5.3.msi) — © Jason A. Donenfeld and contributors
+- **WireGuard** (wireguard-amd64-1.1.msi) — © Jason A. Donenfeld and contributors
 - **Tor Browser** — © The Tor Project, Inc. and contributors
 
 Your rights to use, copy, modify, and distribute those GPL-covered components are governed exclusively by the GPL v3, the full text of which is set out below.
