@@ -2,6 +2,7 @@ import ctypes, threading, time, sys, winreg
 import ctypes.wintypes as wintypes
 from pathlib import Path
 from constants import REG_PATH, REG_VAL, CONFIG_DIR, DEBUG_MODE
+
 try:
     import pythoncom
     import win32com.client
@@ -10,7 +11,7 @@ except ImportError:
     _HAVE_WMI = False
     pythoncom = None
     win32com = None
-DEBUG_MODE = True
+
 ERROR_ALREADY_EXISTS = 183
 
 def acquire_mutex(name: str = "ShurikenInstanceLock") -> bool:
@@ -19,7 +20,6 @@ def acquire_mutex(name: str = "ShurikenInstanceLock") -> bool:
     last_err = ctypes.get_last_error()
     if not handle:
         raise ctypes.WinError(ctypes.get_last_error())
-
     if last_err == ERROR_ALREADY_EXISTS:
         kernel32.CloseHandle(handle)
         return False
@@ -90,10 +90,8 @@ class AdapterWatcher:
     Monitors a list of physical adapters (Wi-Fi, Ethernet, …) and runs a
     repair routine the moment any of them transitions from Disabled → Enabled.
     """
-    # ---------- CONFIG ----------
-    ADAPTERS = ["Wi-Fi", "Ethernet"]
+    ADAPTERS     = ["Wi-Fi", "Ethernet"]
     POLL_SECONDS = 1.0
-    # --------------------------------
 
     def __init__(self, repair_callback):
         self.repair_callback = repair_callback
@@ -103,33 +101,28 @@ class AdapterWatcher:
 
     # ---- WMI helper ---------------------------------------------------
     @staticmethod
-    def _adapter_enabled(name: str) -> bool | None:
-        """Return True=Enabled, False=Disabled, None=not found."""
-        if not _HAVE_WMI:
+    def _adapter_enabled(name: str, wmi_obj) -> bool | None:
+        if not _HAVE_WMI or wmi_obj is None:
             return None
         try:
-            pythoncom.CoInitialize()
-            wmi = win32com.client.GetObject(r"winmgmts:\\.\root\cimv2")
-            query = f"SELECT NetConnectionStatus FROM Win32_NetworkAdapter WHERE NetConnectionID = '{name}'"
-            results = wmi.ExecQuery(query)
+            query = (
+                f"SELECT NetConnectionStatus FROM Win32_NetworkAdapter "
+                f"WHERE NetConnectionID = '{name}'"
+            )
+            results = wmi_obj.ExecQuery(query)
             if results.Count == 0:
                 return None
             code = results.ItemIndex(0).NetConnectionStatus
-
-            # Wi-Fi specific codes
             if name == "Wi-Fi":
-                return code in {2, 5, 7}          # Connected / Connecting / Authenticating
-            # Ethernet
-            return code == 2                     # Connected
+                return code in {2, 5, 7}
+            return code == 2
         except Exception:
             return None
-        finally:
-            pythoncom.CoUninitialize()
 
     # ---- Logging ------------------------------------------------------
     @staticmethod
     def _log(msg: str):
-        if getattr(sys.modules[__name__], "DEBUG_MODE", False):
+        if DEBUG_MODE:
             from datetime import datetime
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             line = f"[AdapterWatcher] {ts} {msg}\n"
@@ -142,36 +135,45 @@ class AdapterWatcher:
 
     # ---- Main loop ----------------------------------------------------
     def _run(self):
-        self._log(f"[UTILS]Started monitoring: {', '.join(self.ADAPTERS)}")
+        wmi_obj = None
+        if _HAVE_WMI:
+            pythoncom.CoInitialize()
+            try:
+                wmi_obj = win32com.client.GetObject(r"winmgmts:\\.\root\cimv2")
+            except Exception:
+                pass
 
-        # initialise states
-        for name in self.ADAPTERS:
-            self._states[name] = self._adapter_enabled(name)
+        try:
+            self._log(f"[UTILS] Started monitoring: {', '.join(self.ADAPTERS)}")
 
-        while not self._stop_event.is_set():
             for name in self.ADAPTERS:
-                cur = self._adapter_enabled(name)
-                prev = self._states.get(name)
+                self._states[name] = self._adapter_enabled(name, wmi_obj)
 
-                # Adapter appeared → was disabled before
-                if cur is True and prev is False:
-                    self._log(f"[UTILS]{name} re-enabled. Running adapater repair.")
-                    self.repair_callback()
+            while not self._stop_event.is_set():
+                for name in self.ADAPTERS:
+                    cur  = self._adapter_enabled(name, wmi_obj)
+                    prev = self._states.get(name)
 
-                # Keep state up-to-date (including None → not present)
-                self._states[name] = cur
+                    if cur is True and prev is False:
+                        self._log(f"[UTILS] {name} re-enabled. Running adapter repair.")
+                        self.repair_callback()
 
-            time.sleep(self.POLL_SECONDS)
+                    self._states[name] = cur
+
+                time.sleep(self.POLL_SECONDS)
+        finally:
+            if _HAVE_WMI:
+                pythoncom.CoUninitialize()
 
     # ---- Public API ---------------------------------------------------
     def start(self):
         if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._run, daemon=True)
             self._thread.start()
-            self._log(f"[UTILS]Thread started")
+            self._log("[UTILS] Thread started")
 
     def stop(self):
         self._stop_event.set()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2)
-        self._log(f"[UTILS]Thread stopped")
+        self._log("[UTILS] Thread stopped")
