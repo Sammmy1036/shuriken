@@ -5,7 +5,7 @@
 # Shuriken VPN
 
 **Shuriken** is a fast, lightweight, and highly secure **WireGuard-based VPN client** for Windows, focused on maximum privacy and reliability.  
-Built for users who want strong leak protection, automatic reconnection, split tunneling, and a clean modern interface — without bloat.
+Built for users who want strong leak protection, automatic reconnection, split tunneling, and a clean modern interface without bloat.
 
 ---
 
@@ -17,7 +17,7 @@ Shuriken is a Windows VPN client that uses **official WireGuard** under the hood
 - DNS, DoH, DoT, and WPAD/proxy leak blocking
 - Skype & Teams SNI/DNS leak suppression
 - Automatic reconnect after sleep, adapter changes, or crashes
-- Split tunneling — per-app VPN bypass
+- Split tunneling per-app VPN bypass
 - Stealth port 443 mode — evades ISP deep packet inspection
 - Smart server selection with fuzzy search
 - Built-in official Tor Browser (Tor-over-VPN recommended)
