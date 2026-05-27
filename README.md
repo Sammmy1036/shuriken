@@ -1,3 +1,7 @@
+<div align="center">
+<img src="assets/shuriken.png" alt="Alt text" width="200"/>
+</div>
+
 # Shuriken VPN
 
 **Shuriken** is a fast, lightweight, and highly secure **WireGuard-based VPN client** for Windows, focused on maximum privacy and reliability.  
