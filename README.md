@@ -53,7 +53,7 @@ Shuriken is a Windows VPN client that uses **official WireGuard** under the hood
 
 > WireGuard® is a registered trademark of Jason A. Donenfeld.  
 > Tor Browser is developed by the Tor Project, Inc.  
-> GeoLite2 data is created by MaxMind — https://www.maxmind.com
+> GeoLite2 data is created by MaxMind.
 
 ---
 
@@ -70,7 +70,7 @@ Shuriken is a Windows VPN client that uses **official WireGuard** under the hood
 Shuriken is an **open-source client**. The code is public and can be audited.  
 It does **not** collect, phone home, or log any user activity.
 
-### Client-side (your computer)
+### Client-side
 
 - No telemetry, analytics, or crash reporting of any kind
 - No storage of connection history, IPs, or timestamps
@@ -143,8 +143,8 @@ python Shuriken.pyw
 ### Option 2: Run the Pre-built Executable
 
 Download the latest release from the [Releases](https://github.com/sammmy1036/shuriken/releases) page. Not posted to releases yet.  
-Run `ShurikenVPN.exe` as Administrator.  
-WireGuard and Tor Browser are bundled — no separate installs needed.
+Run `ShurikenVPN.exe` to setup the application.  
+WireGuard and Tor Browser are bundled and no separate installs are needed.
 
 ---
 
