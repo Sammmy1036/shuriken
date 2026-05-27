@@ -1081,6 +1081,50 @@ class App:
             self.root.after(0, lambda t=text, c=fg_color: self.transient_status.configure(text=t))
             time.sleep(0.35)
 
+    def _get_ip_info(self):
+        """
+        Query the Shuriken echo-IP endpoint and return (ip, provider, country,
+        display_location). Returns (None, None, None, None) on any failure.
+
+        This is the single, canonical IP-detection method used by
+        fetch_and_display_ip, the connect routing thread, and the server-switch
+        routing thread. All IP checks go through here — no raw urlopen calls.
+        """
+        try:
+            response = requests.get(self.ECHOIP_URL, timeout=8)
+            response.raise_for_status()
+            data = response.json()
+
+            ip = data.get("ip")
+            if not ip:
+                return None, None, None, None
+
+            provider        = data.get("asn_org") or data.get("asn") or "Unknown"
+            country         = data.get("country") or "Unknown"
+            city            = data.get("city", "")
+            location_parts  = [p for p in [city, country] if p and p != "Unknown"]
+            display_location = ", ".join(location_parts) if location_parts else country
+
+            if ip.startswith("10."):
+                try:
+                    real_public_ip = socket.gethostbyname("shuriken-vpn3.ddnsgeek.com")
+                    if real_public_ip != ip:
+                        ip               = real_public_ip
+                        provider         = "Datacamp Limited"
+                        country          = "Switzerland"
+                        display_location = "Zurich, Switzerland"
+                except socket.gaierror as e:
+                    print(f"[DEBUG] DDNS fallback failed: {e}")
+                    provider = "VPN"
+                    country  = "VPN"
+
+            return ip, provider, country, display_location
+
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"[DEBUG] echoip request failed: {e}")
+            return None, None, None, None
+
     def fetch_and_display_ip(self, state: str = "Local", continuous: bool = False, timeout_sec: int = 30):
         """
         Fetch public IP until it changes (VPN mode) or timeout.
@@ -1104,40 +1148,7 @@ class App:
         last_ip = getattr(self, '_last_detected_ip', None)
 
         def get_ip_info():
-            try:
-                response = requests.get(self.ECHOIP_URL, timeout=8)
-                response.raise_for_status()
-                data = response.json()
-
-                ip = data.get("ip")
-                if not ip:
-                    return None, None, None, None
-
-                provider        = data.get("asn_org") or data.get("asn") or "Unknown"
-                country         = data.get("country") or "Unknown"
-                city            = data.get("city", "")
-                location_parts  = [p for p in [city, country] if p and p != "Unknown"]
-                display_location = ", ".join(location_parts) if location_parts else country
-
-                if ip.startswith("10."):
-                    try:
-                        real_public_ip = socket.gethostbyname("shuriken-vpn3.ddnsgeek.com")
-                        if real_public_ip != ip:
-                            ip               = real_public_ip
-                            provider         = "Datacamp Limited"
-                            country          = "Switzerland"
-                            display_location = "Zurich, Switzerland"
-                    except socket.gaierror as e:
-                        print(f"[DEBUG] DDNS fallback failed: {e}")
-                        provider = "VPN"
-                        country  = "VPN"
-
-                return ip, provider, country, display_location
-
-            except Exception as e:
-                if DEBUG_MODE:
-                    print(f"[DEBUG] echoip request failed: {e}")
-                return None, None, None, None
+            return self._get_ip_info()
 
         def update_ui_protected(ip, provider, country, display_location):
             self.root.after(0, lambda: (
@@ -1635,9 +1646,9 @@ class App:
                                 text=f"Establishing secure route... ({a + 1}/{MAX_ATTEMPTS})"
                             ))
                             try:
-                                with urllib.request.urlopen(self.ECHOIP_URL, timeout=8) as resp:
-                                    current_ip = resp.read().decode("utf-8").strip()
-                                if current_ip:
+                                current_ip, _provider, _country, _loc = self._get_ip_info()
+                                if current_ip and not current_ip.startswith(
+                                        ("10.", "100.64.", "192.168.", "172.")):
                                     baseline_ip = getattr(self, "_last_detected_ip", None)
                                     if baseline_ip is None or current_ip != baseline_ip:
                                         self._last_detected_ip = current_ip
@@ -1848,9 +1859,9 @@ class App:
                         if _sw_stop.is_set() or not is_vpn_up():
                             return
                         try:
-                            with urllib.request.urlopen(self.ECHOIP_URL, timeout=6) as resp:
-                                current_ip = resp.read().decode("utf-8").strip()
-                            if current_ip and not current_ip.startswith(("10.", "100.64.", "192.168.", "172.")):
+                            current_ip, _provider, _country, _loc = self._get_ip_info()
+                            if current_ip and not current_ip.startswith(
+                                    ("10.", "100.64.", "192.168.", "172.")):
                                 self._last_detected_ip = current_ip
                                 if not _sw_stop.is_set():
                                     def _mark():
@@ -2025,7 +2036,7 @@ def main():
             return
 
         WG_PROGDATA, WG_DIR, WG_EXE, WG_CLI = get_wg_paths()
-        msi_path = (BUNDLED_BASE_DIR / "Resources" / "wireguard-amd64-0.5.3.msi").resolve()
+        msi_path = (BUNDLED_BASE_DIR / "Resources" / "wireguard-amd64-1.1.msi").resolve()
         log_path = Path(os.environ.get("TEMP", ".")) / "Shuriken_installer.log"
 
         app = App(root)
