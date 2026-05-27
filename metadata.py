@@ -2,117 +2,80 @@
 # SERVER_METADATA: Built-in configuration for recognized server files
 # ----------------------------------------------------------------------
 SERVER_METADATA = {
-    "Shuriken-CA.conf":  {"city": "Los Angeles", "state": "CA", "country": "US", "name": "Shuriken-CA"},
-    "Shuriken-NL.conf":  {"city": "Amsterdam", "state": "", "country": "NL", "name": "Shuriken-NL"},
-    "Shuriken-FL.conf":  {"city": "Miami", "state": "FL", "country": "US", "name": "Shuriken-FL"},
-    "wg-CA-FREE-1.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-1"},
-    "wg-CA-FREE-2.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-2"},
-    "wg-CA-FREE-3.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-3"},
-    "wg-CA-FREE-4.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-4"},
-    "wg-CA-FREE-5.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-5"},
-    "wg-CA-FREE-6.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-6"},
-    "wg-CA-FREE-7.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-7"},
-    "wg-CA-FREE-8.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-8"},
-    "wg-CA-FREE-13.conf": {"city": "Vancouver", "state": "BC", "country": "CA", "name": "Vancouver-13"},
-    "wg-CH-FREE-4.conf": {"city": "Zurich", "state": "", "country": "CH", "name": "Zurich-4"},
-    "wg-CH-FREE-8.conf": {"city": "Zurich", "state": "", "country": "CH", "name": "Zurich-8"},
-    "wg-JP-FREE-3.conf": {"city": "Osaka", "state": "", "country": "JP", "name": "Osaka-3"},
-    "wg-JP-FREE-18.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-18"},
-    "wg-JP-FREE-19.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-19"},
-    "wg-JP-FREE-26.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-26"},
-    "wg-JP-FREE-27.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-27"},
-    "wg-JP-FREE-28.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-28"},
-    "wg-JP-FREE-29.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-29"},
-    "wg-JP-FREE-30.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-30"},
-    "wg-JP-FREE-31.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-31"},
-    "wg-MX-FREE-4.conf": {"city": "Mexico City", "state": "", "country": "MX", "name": "MX-4"},
-    "wg-NL-FREE-2.conf": {"city": "Amsterdam", "state": "", "country": "NL", "name": "Amsterdam-2"},
-    "wg-NO-FREE-7.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-7"},
-    "wg-NO-FREE-8.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-8"},
-    "wg-NO-FREE-9.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-9"},
-    "wg-PL-FREE-2.conf": {"city": "Warsaw", "state": "", "country": "PL", "name": "Warsaw-2"},
-    "wg-PL-FREE-17.conf": {"city": "Warsaw", "state": "", "country": "PL", "name": "Warsaw-17"},
-    "wg-RO-FREE-21.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-21"},
-    "wg-RO-FREE-27.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-27"},
-    "wg-RO-FREE-28.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-28"},
-    "wg-SG-FREE-4.conf": {"city": "Singapore", "state": "", "country": "SG", "name": "SG-4"},
-    "wg-SG-FREE-7.conf": {"city": "Singapore", "state": "", "country": "SG", "name": "SG-7"},
-    "wg-US-FREE-1.conf": {"city": "Los Angeles", "state": "CA", "country": "US", "name": "LA-1"},
-    "wg-US-FREE-2.conf": {"city": "Los Angeles", "state": "CA", "country": "US", "name": "LA-2"},
-    "wg-US-FREE-3.conf": {"city": "Miami", "state": "FL", "country": "US", "name": "Miami-3"},
-    "wg-US-FREE-4.conf": {"city": "Los Angeles", "state": "CA", "country": "US", "name": "LA-4"},
-    "wg-US-FREE-5.conf": {"city": "Seattle", "state": "WA", "country": "US", "name": "Seattle-5"},
-    "wg-US-FREE-6.conf": {"city": "Dallas", "state": "TX", "country": "US", "name": "Dallas-6"},
-    "wg-US-FREE-27.conf": {"city": "Seattle", "state": "WA", "country": "US", "name": "Seattle-27"},
-    "wg-US-FREE-36.conf": {"city": "San Jose", "state": "CA", "country": "US", "name": "SanJose-36"},
-    "wg-US-FREE-38.conf": {"city": "Atlanta", "state": "GA", "country": "US", "name": "Atlanta-38"},
-    "wg-US-FREE-51.conf": {"city": "Miami", "state": "FL", "country": "US", "name": "Miami-51"},
-    "wg-US-FREE-57.conf": {"city": "New York", "state": "NY", "country": "US", "name": "NY-57"},
-    "wg-US-FREE-58.conf": {"city": "New York", "state": "NY", "country": "US", "name": "NY-58"},
-    "wg-US-FREE-60.conf": {"city": "Los Angeles", "state": "CA", "country": "US", "name": "LA-60"},
-    "wg-US-FREE-66.conf": {"city": "Los Angeles", "state": "CA", "country": "US", "name": "LA-66"},
+    "Shuriken-US-CA.conf":  {"city": "Los Angeles", "state": "CA", "country": "US", "name": "Shuriken Los Angeles, CA, USA"}, # Not available
+    "Shuriken-NL.conf":     {"city": "Amsterdam",   "state": "",   "country": "NL", "name": "Shuriken Amsterdam, Netherlands"}, # Not available
+    "Shuriken-FL.conf":     {"city": "Miami",        "state": "FL", "country": "US", "name": "Shuriken Miami, FL, USA"}, # Not available
+    "Shuriken-JA-TK.conf":  {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Shuriken Tokyo, Japan"}, # Not available
+    "Shuriken-PA-PC.conf":  {"city": "Panama City",  "state": "",   "country": "PA", "name": "Shuriken Panama City, Panama"}, # Not available
+    "Shuriken-CH-ZU.conf":  {"city": "Zurich",       "state": "",   "country": "CH", "name": "Shuriken Zurich, Switzerland"}, # Live
+    "Shuriken-US-NY.conf":  {"city": "New York",     "state": "NY", "country": "US", "name": "Shuriken New York, NY, USA"}, # Not available
+    "Shuriken-KL-MA.conf":  {"city": "KL",           "state": "",   "country": "MY", "name": "Shuriken KL, Malaysia"}, # Not available
+    "Shuriken-IC.conf":     {"city": "",             "state": "",   "country": "IS", "name": "Shuriken Iceland"}, # Not available
+    "wg-CA-FREE-1.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-1"},
+    "wg-CA-FREE-2.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-2"},
+    "wg-CA-FREE-3.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-3"},
+    "wg-CA-FREE-4.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-4"},
+    "wg-CA-FREE-5.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-5"},
+    "wg-CA-FREE-6.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-6"},
+    "wg-CA-FREE-7.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-7"},
+    "wg-CA-FREE-8.conf":    {"city": "Toronto",      "state": "ON", "country": "CA", "name": "Toronto-8"},
+    "wg-CA-FREE-13.conf":   {"city": "Vancouver",    "state": "BC", "country": "CA", "name": "Vancouver-13"},
+    "wg-CH-FREE-4.conf":    {"city": "Zurich",       "state": "",   "country": "CH", "name": "Zurich-4"},
+    "wg-CH-FREE-8.conf":    {"city": "Zurich",       "state": "",   "country": "CH", "name": "Zurich-8"},
+    "wg-JP-FREE-3.conf":    {"city": "Osaka",        "state": "",   "country": "JP", "name": "Osaka-3"},
+    "wg-JP-FREE-18.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-18"},
+    "wg-JP-FREE-19.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-19"},
+    "wg-JP-FREE-26.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-26"},
+    "wg-JP-FREE-27.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-27"},
+    "wg-JP-FREE-28.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-28"},
+    "wg-JP-FREE-29.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-29"},
+    "wg-JP-FREE-30.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-30"},
+    "wg-JP-FREE-31.conf":   {"city": "Tokyo",        "state": "",   "country": "JP", "name": "Tokyo-31"},
+    "wg-MX-FREE-4.conf":    {"city": "Mexico City",  "state": "",   "country": "MX", "name": "MX-4"},
+    "wg-NL-FREE-2.conf":    {"city": "Amsterdam",    "state": "",   "country": "NL", "name": "Amsterdam-2"},
+    "wg-NO-FREE-7.conf":    {"city": "Oslo",         "state": "",   "country": "NO", "name": "Oslo-7"},
+    "wg-NO-FREE-8.conf":    {"city": "Oslo",         "state": "",   "country": "NO", "name": "Oslo-8"},
+    "wg-NO-FREE-9.conf":    {"city": "Oslo",         "state": "",   "country": "NO", "name": "Oslo-9"},
+    "wg-PL-FREE-2.conf":    {"city": "Warsaw",       "state": "",   "country": "PL", "name": "Warsaw-2"},
+    "wg-PL-FREE-17.conf":   {"city": "Warsaw",       "state": "",   "country": "PL", "name": "Warsaw-17"},
+    "wg-RO-FREE-21.conf":   {"city": "Bucharest",    "state": "",   "country": "RO", "name": "Bucharest-21"},
+    "wg-RO-FREE-27.conf":   {"city": "Bucharest",    "state": "",   "country": "RO", "name": "Bucharest-27"},
+    "wg-RO-FREE-28.conf":   {"city": "Bucharest",    "state": "",   "country": "RO", "name": "Bucharest-28"},
+    "wg-SG-FREE-4.conf":    {"city": "Singapore",    "state": "",   "country": "SG", "name": "SG-4"},
+    "wg-SG-FREE-7.conf":    {"city": "Singapore",    "state": "",   "country": "SG", "name": "SG-7"},
 }
 
 # ----------------------------------------------------------------------
-# USER_SERVER_METADATA: Intended for a separate tab allowing user edits
+# USER_SERVER_METADATA: Intended for a separate tab allowing user edits.
 # ----------------------------------------------------------------------
-USER_SERVER_METADATA = {
-    "wg-CA-FREE-1.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-1"},
-    "wg-CA-FREE-2.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-2"},
-    "wg-CA-FREE-3.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-3"},
-    "wg-CA-FREE-4.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-4"},
-    "wg-CA-FREE-5.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-5"},
-    "wg-CA-FREE-6.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-6"},
-    "wg-CA-FREE-7.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-7"},
-    "wg-CA-FREE-8.conf": {"city": "Toronto", "state": "ON", "country": "CA", "name": "Toronto-8"},
-    "wg-CA-FREE-13.conf": {"city": "Vancouver", "state": "BC", "country": "CA", "name": "Vancouver-13"},
-    "wg-CH-FREE-4.conf": {"city": "Zurich", "state": "", "country": "CH", "name": "Zurich-4"},
-    "wg-CH-FREE-8.conf": {"city": "Zurich", "state": "", "country": "CH", "name": "Zurich-8"},
-    "wg-JP-FREE-3.conf": {"city": "Osaka", "state": "", "country": "JP", "name": "Osaka-3"},
-    "wg-JP-FREE-18.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-18"},
-    "wg-JP-FREE-19.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-19"},
-    "wg-JP-FREE-26.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-26"},
-    "wg-JP-FREE-27.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-27"},
-    "wg-JP-FREE-28.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-28"},
-    "wg-JP-FREE-29.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-29"},
-    "wg-JP-FREE-30.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-30"},
-    "wg-JP-FREE-31.conf": {"city": "Tokyo", "state": "", "country": "JP", "name": "Tokyo-31"},
-    "wg-MX-FREE-4.conf": {"city": "Mexico City", "state": "", "country": "MX", "name": "MX-4"},
-    "wg-NL-FREE-2.conf": {"city": "Amsterdam", "state": "", "country": "NL", "name": "Amsterdam-2"},
-    "wg-NO-FREE-7.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-7"},
-    "wg-NO-FREE-8.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-8"},
-    "wg-NO-FREE-9.conf": {"city": "Oslo", "state": "", "country": "NO", "name": "Oslo-9"},
-    "wg-PL-FREE-2.conf": {"city": "Warsaw", "state": "", "country": "PL", "name": "Warsaw-2"},
-    "wg-PL-FREE-17.conf": {"city": "Warsaw", "state": "", "country": "PL", "name": "Warsaw-17"},
-    "wg-RO-FREE-21.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-21"},
-    "wg-RO-FREE-27.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-27"},
-    "wg-RO-FREE-28.conf": {"city": "Bucharest", "state": "", "country": "RO", "name": "Bucharest-28"},
-    "wg-SG-FREE-4.conf": {"city": "Singapore", "state": "", "country": "SG", "name": "SG-4"},
-    "wg-SG-FREE-7.conf": {"city": "Singapore", "state": "", "country": "SG", "name": "SG-7"},
+_FREE_TIER_PREFIX = "wg-"
+USER_SERVER_METADATA: dict = {
+    k: v for k, v in SERVER_METADATA.items()
+    if k.startswith(_FREE_TIER_PREFIX)
 }
 
 # ----------------------------------------------------------------------
-# CITY_SYNONYMS — kept all original meaningful entries, removed prefix spam
+# CITY_SYNONYMS
 # ----------------------------------------------------------------------
 CITY_SYNONYMS = {
-    "amsterdam": ["a", "am", "ams"],
-    "bucharest": ["b", "bu", "buc", "buch", "bucha", "buchar", "buchare", "buchares"],
+    "amsterdam": ["am", "ams"],
+    "bucharest": ["bu", "buc", "buch", "bucha", "buchar", "buchare", "buchares"],
     "los angeles": ["la"],
     "new york": ["nyc", "ny"],
-    "osaka": ["o"],
-    "oslo": ["o"],
-    "san diego": ["sa", "san"],
-    "san jose": ["sa", "san", "sj"],
-    "seattle": ["se", "sea", "seat", "seatt", "seattl"],
-    "tokyo": ["t", "to"],
-    "toronto": ["t", "to", "tor", "toro", "toron", "toront"],
-    "vancouver": ["v", "va", "van"],
-    "warsaw": ["w", "wa", "war", "wars", "warsa"],
-    "zurich": ["z", "zu"],
+    "osaka": ["osa", "osak"],           
+    "oslo": ["osl"],                     
+    "san diego": ["san"],
+    "san jose": ["sj"],                
+    "seattle": ["sea", "seat", "seatt", "seattl"],
+    "tokyo": ["tok", "toky"],           
+    "toronto": ["tor", "toro", "toron", "toront"],  
+    "vancouver": ["van"],
+    "warsaw": ["war", "wars", "warsa"],
+    "zurich": ["zur"],
 }
 
 # ----------------------------------------------------------------------
-# STATE_SYNONYMS — kept all original meaningful entries, removed prefix spam
+# STATE_SYNONYMS — unchanged from original
 # ----------------------------------------------------------------------
 STATE_SYNONYMS = {
     # US States
@@ -183,7 +146,7 @@ STATE_SYNONYMS = {
 }
 
 # ----------------------------------------------------------------------
-# COUNTRY_SYNONYMS — kept all original meaningful entries, removed prefix spam
+# COUNTRY_SYNONYMS — unchanged from original
 # ----------------------------------------------------------------------
 COUNTRY_SYNONYMS = {
     "afghanistan": ["af"],
