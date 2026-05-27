@@ -141,7 +141,17 @@ def add_kill_switch():
         _KILLSWITCH_RULES[:] = names
 
 def remove_kill_switch():
-    """Remove all Shuriken kill-switch rules."""
+    """Remove all Shuriken kill-switch rules.
+
+    Two-pass approach:
+      Pass 1 — remove tracked rules by exact display name (fast, no registry scan).
+      Pass 2 — wildcard sweep for ANY 'Shuriken KillSwitch*' rule regardless of
+               whether it was tracked. This catches the PreSwitch rules created by
+               block_physical_immediately(), which are intentionally NOT added to
+               _KILLSWITCH_RULES (they are transient pre-switch blockers). Without
+               this second pass those rules survive disconnect and leave the physical
+               adapter permanently blocked.
+    """
     if _KILLSWITCH_RULES:
         _ps("; ".join(
             f"Get-NetFirewallRule -DisplayName '{rn.replace(chr(39), chr(39)*2)}' "
@@ -149,11 +159,13 @@ def remove_kill_switch():
             for rn in _KILLSWITCH_RULES
         ))
         _KILLSWITCH_RULES.clear()
-    else:
-        _ps(
-            "Get-NetFirewallRule | Where-Object { $_.DisplayName -like 'Shuriken KillSwitch*' } "
-            "-ErrorAction SilentlyContinue | Remove-NetFirewallRule -Confirm:$false | Out-Null"
-        )
+
+    # Always run the wildcard sweep — catches PreSwitch rules and any rules
+    # left by a previous session that were never tracked in _KILLSWITCH_RULES.
+    _ps(
+        "Get-NetFirewallRule | Where-Object { $_.DisplayName -like 'Shuriken KillSwitch*' } "
+        "-ErrorAction SilentlyContinue | Remove-NetFirewallRule -Confirm:$false | Out-Null"
+    )
 
 def block_physical_immediately() -> None:
     """
