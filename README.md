@@ -105,6 +105,7 @@ No user data is sold or provided to any third party or government agency. The on
 
 | Date | Event |
 |------|-------|
+| 2026-07-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
 | 2026-06-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
 | 2026-05-27 | Updates to GeoLite2 City Data for IPs in California Region of the United States of America. |
 | 2026-05-01 | Routine reboot of all public nodes. Verified `tmpfs` mounts and confirmed no persistent WireGuard-related files post-reboot. |
